@@ -370,18 +370,46 @@ def extract_maf(name:str,
             if e_value_internal_id.shape[0] <= 1:
                 collector = results[results.seqid.str.contains(target_species)]
             else:
-                collector = results[results.seqid.isin(e_value_internal_id.seqid.values)]     
+                collector = results[results.seqid.isin(e_value_internal_id.seqid.values)]
+
+    # Deduplicate by species name: the same organism can appear with different chromosome
+    # identifiers across MAF blocks (e.g. Pan_troglodytes.chr1 and Pan_troglodytes.chr7).
+    # Without deduplication, that organism contributes multiple rows, inflating coverage
+    # and biasing all other per-position statistics.
+    species_names = collector['seqid'].str.split('.').str[0]
+    if species_names.duplicated().any():
+        iupac_rev = {frozenset(v): k for k, v in iupac_codes.items() if k != '-'}
+        merged_rows = []
+        for species, group in collector.groupby(species_names, sort=False):
+            if len(group) == 1:
+                merged_rows.append({'seqid': group.iloc[0]['seqid'], 'seq': group.iloc[0]['seq']})
+            else:
+                seqs = [str(s) for s in group['seq'].tolist()]
+                merged = []
+                for bases in zip(*seqs):
+                    non_gap = [b.upper() for b in bases if b != '-']
+                    if not non_gap:
+                        merged.append('-')
+                    else:
+                        unique = frozenset(non_gap)
+                        if len(unique) == 1:
+                            merged.append(next(iter(unique)))
+                        else:
+                            merged.append(iupac_rev.get(unique, 'N'))
+                merged_rows.append({'seqid': group.iloc[0]['seqid'], 'seq': Seq(''.join(merged))})
+        collector = pd.DataFrame(merged_rows)
+
     if count_arg in ['raw','raw_genome']:
+        seqids = collector['seqid'].copy()
+        if count_arg == 'raw_genome':
+            seqids = seqids.str.split('.').str[0]
         sequence_length = len(collector.iloc[0]['seq'])
-        list_of_dfs = []
+        result = []
         for i in range(sequence_length):
-            # Extract the base at the i-th position for each row
-            temp_df = collector[['seqid']].copy()  # Start with the seqid column
-            temp_df['seq'] = collector['seq'].apply(lambda x: x[i])  # Add the base at the i-th position
-            if count_arg == 'raw_genome':
-                temp_df['seqid'] = temp_df['seqid'].str.split('.').str[0]
-            list_of_dfs.append(temp_df)
-        return list_of_dfs
+            bases = collector['seq'].apply(lambda x: x[i])
+            entry = '|'.join(f'{s}:{b}' for s, b in zip(seqids, bases))
+            result.append(entry)
+        return result
 
     try:
         ref_alleles = np.char.upper(collector[collector.seqid.str.contains(target_species)]['seq'].to_list())[0]
@@ -393,10 +421,10 @@ def extract_maf(name:str,
     output_array=[]
     for idx, pos_array in enumerate(array_transposed):
         frequencies =count_bases_with_ambiguity(np.char.upper(pos_array))
-        ref_allele=ref_alleles[idx]
+        ref_allele = str(ref_alleles[idx])
         total = sum(frequencies.values())
         if count_arg == 'ref_freq':
-            alt_count = total - frequencies[ref_allele]
+            alt_count = total - frequencies.get(ref_allele, 0)
             alt_freq=alt_count/total
             if total == 1:
                 alt_freq = np.nan
@@ -439,10 +467,12 @@ def get_maf_filepath(maf_dir, chrom):
 
     # Determine the appropriate file to use
     maf_filepath = None
-    if any(f.endswith('.maf') for f in maf_files):
-        maf_filepath = f"{maf_dir}/{maf_filename}" #.maf is more optimal performance wise 
-    elif any(f.endswith('.maf.gz') for f in maf_files):
-        maf_filepath = f"{maf_dir}/{maf_filename}.gz" 
+    maf_match = next((f for f in maf_files if f.endswith('.maf') and not f.endswith('.maf.gz')), None)
+    gz_match = next((f for f in maf_files if f.endswith('.maf.gz')), None)
+    if maf_match:
+        maf_filepath = f"{maf_dir}/{maf_match}"
+    elif gz_match:
+        maf_filepath = f"{maf_dir}/{gz_match}"
     else:
         raise FileNotFoundError(f"No .maf or .maf.gz file found for chromosome {chrom} in {maf_dir}")
 
