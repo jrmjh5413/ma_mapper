@@ -3,7 +3,8 @@ import sys
 import os
 from tabnanny import verbose
 
-from dev.installation.biopython.Bio.Emboss.PrimerSearch import OutputRecord
+# dead auto-import, module does not exist and OutputRecord is never used
+# from dev.installation.biopython.Bio.Emboss.PrimerSearch import OutputRecord
 sys.path.append('/home/pc575/rds/rds-kzfps-XrHDlpCeVDg/users/pakkanan/phd_project_development/dev/packaging_dir/ma_mapper/')
 from ma_mapper import mapper
 import pandas as pd

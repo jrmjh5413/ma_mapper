@@ -4,6 +4,7 @@
 - [Input preparation](#input-preparation)
     - [TE coordinates](#te-coordinates)
     - [Transposable element multiple sequeunce alignment (TE MSA)](#transposable-element-multiple-sequeunce-alignment-te-msa)
+        - [Large families](#large-families)
     - [Genome-wide datasets](#genome-wide-datasets)
         - [`BED` file](#bed-file)
         - [`BAM` file](#bam-file)
@@ -65,6 +66,40 @@ Then, the multiple sequence alignment was performed on TE sequences using `ma_ma
 ```
 
 The output was saved in FASTA format. Users can adjust multithread parameters using `nthread, nthreadb, nthreadit` and provide additional flags using `mafft_arg` argument.
+
+#### Large families
+
+`mafft_align()` uses MAFFT's default algorithm (FFT-NS-2), whose memory grows as
+about `n^1.19`. It is reliable up to a few tens of thousands of copies and fails
+above roughly 65,000 — for the largest human families it would need ~150 GB.
+
+For families above ~50,000 copies, use a profile alignment instead:
+
+```bash
+mafft --thread 16 --maxiterate 1000 --localpair seed1000.fasta > seed.afa
+hmmbuild --dna --cpu 16 --informat afa family.hmm seed.afa
+hmmalign --dna --outformat afa family.hmm all_copies.fasta | tr '.' '-' > family.afa
+```
+
+This aligns all 223,029 copies of MIRb in 2.5 minutes on 3.1 GB. Two rules:
+never use `hmmalign --trim` or a match-column-only projection (they delete ~11%
+of bases and silently break `map_data()`), and always translate `.` to `-`
+(HMMER's insert-column gap character is not in `parse_alignment()`'s hash table).
+
+Note that the aligner is only half the problem: the overlay pipeline's row
+clustering (`pdist` + `linkage`) is also O(n^2) and needs 199 GB at 223,029
+copies, so it fails at the same ~65,000-copy threshold. Use an aligner guide
+tree (`famsa -gt nj -medoidtree -gt_export`, ~10 s) above that size.
+
+Overlay outputs are written filtered (~250 columns), so they stay small — but
+`MAF raw` costs ~5,700 bytes per cell against 4-29 for every other track, which
+projects to ~178 GB for a single large family. Use the aggregated MAF variants
+(`base_count`, `coverage`, `common_freq`, `ref_freq`) instead at that scale.
+
+Benchmarks for ten aligner configurations, the constraints any alignment must
+satisfy for `map_data()`, memory footprints per aligner, the row-ordering
+comparison, and overlay output sizes and compressibility are in
+[Aligning large TE families](/docs/aligning_large_families.md).
 
 ### Genome-wide datasets
 To show case the capability of the framework, genome-wide datasets in this thesis were obtained from various publicly available sources as follows:

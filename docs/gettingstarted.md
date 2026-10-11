@@ -46,3 +46,6 @@ pip install git+https://github.com/pkncsk/ma_mapper@experimental
 ## Package documentation
 [Documentaion](/docs/package_docs.md) for general usages and function parameters.
 
+[Aligning large TE families](/docs/aligning_large_families.md) for families above
+~50,000 copies, where the default MAFFT settings run out of memory.
+

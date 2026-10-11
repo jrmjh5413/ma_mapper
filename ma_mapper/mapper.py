@@ -76,7 +76,14 @@ def parse_alignment(alignment_file:str,
             seq_length = len(value)
         seq_count = seq_count + 1
     if seq_count == 0:
-        logger.info('no records')
+        # An empty/malformed alignment used to fall through to the np.zeros call
+        # below and surface as UnboundLocalError('seq_length'), which hid the real
+        # cause. 15 high-copy families (AluJb, MIR, L2c ...) were silently skipped
+        # in the 2026-08-08 subfam_matrices_000 build for exactly this reason:
+        # default MAFFT is O(N^2) and had written 0-byte .fasta.aligned files.
+        src = alignment_file if isinstance(alignment_file, str) else '<records>'
+        raise ValueError(
+            "alignment '%s' contains no records (empty or malformed file)" % src)
     else:
         seq_id_list = list()
         for idx, content in enumerate(records):
@@ -93,10 +100,26 @@ def parse_alignment(alignment_file:str,
     for i, value in enumerate(records):
         parsed_alignment[i, :] = np.array(str(value.seq).upper(), 'c').view(np.uint8)
     
-    hash_table = {45:0, 65:1, 67:2, 84:3, 71:4, 78:5}
-    alignment_matrix = np.ndarray(parsed_alignment.shape)
+    # '-' and '.' both mean gap ('.' is HMMER's insert-column gap character).
+    # Values are 0-5, so uint8 is sufficient: float64 costs 8x the memory for
+    # no benefit, and np.bincount() in base_count() rejects float input.
+    hash_table = {45:0, 46:0, 65:1, 67:2, 84:3, 71:4, 78:5}
+    # np.zeros, not np.ndarray: np.ndarray leaves cells uninitialised, so any
+    # character outside hash_table used to yield garbage that made the
+    # `row > 0` test in map_data() non-deterministic.
+    alignment_matrix = np.zeros(parsed_alignment.shape, dtype=np.uint8)
     for k in hash_table:
         alignment_matrix[parsed_alignment == k] = hash_table[k]
+    # Unmapped characters now silently become gaps; say so rather than hide it.
+    known = np.zeros(256, dtype=bool)
+    known[list(hash_table)] = True
+    unmapped = ~known[parsed_alignment]
+    if unmapped.any():
+        chars = sorted({chr(c) for c in np.unique(parsed_alignment[unmapped])})
+        logger.warning(
+            f"{int(unmapped.sum())} alignment characters outside "
+            f"{{-,.,A,C,T,G,N}} were treated as gaps: {chars}"
+        )
     if save_to_file:
         if isinstance(save_to_file, str) == True:
             output_file = save_to_file
@@ -233,7 +256,10 @@ def map_data(extracted_data:str,
     if nested_data:
         canvas = np.full(alignment_matrix.shape, None)
     else:
-        canvas = np.zeros(alignment_matrix.shape, dtype=float)
+        # float32, not float64: genome-wide tracks (phyloP, CADD, allele
+        # frequencies, coverage) carry far fewer than 7 significant digits, and
+        # this array is the single largest allocation in the pipeline.
+        canvas = np.zeros(alignment_matrix.shape, dtype=np.float32)
         
     for idx, row in enumerate(alignment_matrix):
         #print(f"data_file[{idx}]: {data_file[idx]}")

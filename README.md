@@ -57,6 +57,7 @@ pip install git+https://github.com/pkncsk/ma_mapper@experimental
 ## Documentation quick links
 - [Getting started](docs/gettingstarted.md)
 - [Package documentations](docs/package_docs.md)
+- [Aligning large TE families](docs/aligning_large_families.md)
 ## Under construction
 - [Tutorials]()
 - [API references]()
