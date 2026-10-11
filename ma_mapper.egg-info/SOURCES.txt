@@ -1,7 +1,0 @@
-README.md
-pyproject.toml
-setup.py
-ma_mapper.egg-info/PKG-INFO
-ma_mapper.egg-info/SOURCES.txt
-ma_mapper.egg-info/dependency_links.txt
-ma_mapper.egg-info/top_level.txt

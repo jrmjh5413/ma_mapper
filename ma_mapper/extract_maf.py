@@ -5,15 +5,16 @@ import os
 import sys
 from concurrent.futures import ProcessPoolExecutor
 from itertools import repeat 
+from functools import partial
 from Bio.AlignIO import MafIO
 from . import logger
+from ._io_common import group_coordinates, read_coordinate_table, save_or_return, worker_count
 if sys.version_info >= (3, 8, 0):
     from typing import Literal, Tuple, List
 else:
     from typing_extensions import Literal, Tuple, List
 
 from Bio.Seq import Seq
-from Bio.SeqRecord import SeqRecord
 from collections import Counter, defaultdict
 import time
 from bisect import bisect_left, bisect_right
@@ -411,11 +412,19 @@ def extract_maf(name:str,
             result.append(entry)
         return result
 
-    try:
-        ref_alleles = np.char.upper(collector[collector.seqid.str.contains(target_species)]['seq'].to_list())[0]
-    except IndexError:
-        print(f'IndexError:{name}\t{maf_file}\t{maf_id}\t{chrom}\t{start}\t{end}\t{strand}')
-       
+    target_rows = collector[collector.seqid.str.contains(target_species)]['seq'].to_list()
+    if not target_rows:
+        # Before 0.9.0 this printed the IndexError and carried on, so the next
+        # line failed with UnboundLocalError and hid the real cause. An empty
+        # list also reaches np.char.upper as a TypeError rather than an
+        # IndexError, which the old handler would not have caught either.
+        raise ValueError(
+            f"target species '{target_species}' is absent from the alignment for "
+            f"{name} ({maf_id} {chrom}:{start}-{end}{strand}) in {maf_file}. "
+            "If species_list is set, it has to include the target species."
+        )
+    ref_alleles = np.char.upper(target_rows)[0]
+
     
     array_transposed=np.array(collector['seq'].to_list()).transpose()
     output_array=[]
@@ -441,13 +450,17 @@ def extract_maf(name:str,
                 output_array.append(common_count)
         elif count_arg == 'common_freq_nogap':
             frequencies.pop('-', None)
-            try:
-                common_allele = max(frequencies, key=frequencies.get)
-            except ValueError:
-                print(f'ValueError:{name}\t{maf_file}\t{maf_id}\t{chrom}\t{start}\t{end}\t{strand}')
-            common_count = frequencies.get(common_allele)
-            common_freq = common_count/total
-            output_array.append(common_freq)
+            nogap_total = sum(frequencies.values())
+            if not frequencies or nogap_total == 0:
+                # Every species has a deletion at this column: there is no
+                # commonest base. Before 0.9.0 max() raised ValueError, the
+                # handler printed it, and the next line crashed on None.
+                output_array.append(np.nan)
+                continue
+            common_allele = max(frequencies, key=frequencies.get)
+            # Divided by the gap-free total, not by `total`, which still
+            # included the gaps this branch has just discarded.
+            output_array.append(frequencies[common_allele] / nogap_total)
         elif count_arg == 'base_count':
             output_array.append(frequencies)
         elif count_arg in ['base_freq','base_freq_nogap']:
@@ -462,12 +475,13 @@ def extract_maf(name:str,
 #%%
 def get_maf_filepath(maf_dir, chrom):
     files = os.listdir(maf_dir)
-    maf_filename = f"{chrom}.maf" 
-    maf_files = [f for f in files if f.endswith(maf_filename)]
+    # A gzipped file ends with '<chrom>.maf.gz', which does not end with
+    # '<chrom>.maf': before 0.9.0 the gz branch below could never be reached.
+    maf_files = [f for f in files if f.endswith(f"{chrom}.maf") or f.endswith(f"{chrom}.maf.gz")]
 
     # Determine the appropriate file to use
     maf_filepath = None
-    maf_match = next((f for f in maf_files if f.endswith('.maf') and not f.endswith('.maf.gz')), None)
+    maf_match = next((f for f in maf_files if f.endswith('.maf')), None)
     gz_match = next((f for f in maf_files if f.endswith('.maf.gz')), None)
     if maf_match:
         maf_filepath = f"{maf_dir}/{maf_match}"
@@ -478,6 +492,27 @@ def get_maf_filepath(maf_dir, chrom):
 
     return maf_filepath
 #%%
+def build_maf_index(maf_file, target_species='Homo_sapiens', chrom=None):
+    """Create the sqlite index Biopython needs, before any parallel work starts.
+
+    ``extract_maf`` constructs a ``MafIndex`` per copy. If the index does not
+    exist yet, every worker process starts building the same one at the same
+    time into the same file. Build it once, in one process, first.
+
+    Returns the path to the index.
+    """
+    if chrom is None:
+        chrom = os.path.basename(maf_file).split('.')[0]
+    mafindex_filepath = '.'.join(str.split(maf_file, sep='.')[:-1]) + '.mafindex'
+    maf_id = f'{target_species}.{chrom}'
+    if os.path.isfile(mafindex_filepath):
+        logger.info('maf index already present: %s', mafindex_filepath)
+    else:
+        logger.info('building maf index %s (this is slow and must not be parallel)', mafindex_filepath)
+    MafIO.MafIndex(mafindex_filepath, maf_file, maf_id)
+    return mafindex_filepath
+
+
 def maf_io(coordinate_table: pd.DataFrame|str, 
            maf:str,
            separated_maf:bool = False, 
@@ -488,65 +523,97 @@ def maf_io(coordinate_table: pd.DataFrame|str,
            species_list:list=None,
            e_value_table: str|pd.DataFrame|None=None, 
            internal_id_table: str|pd.DataFrame|None=None, **kwargs):
-    if isinstance(coordinate_table, str):
-        if os.path.isfile(coordinate_table):
-            coordinate_local = pd.read_csv(coordinate_table, sep='\t', header=None)
-        else:
-            print('coordinate_table file not found')
-    else:
-        coordinate_local = coordinate_table
-    
+    """Summarise a multiple-species alignment per base for every copy.
 
-    print(f'extract from maf target: {maf}')
-    if generate_new_id == True:
-        meta_id = [f'entry_{index}' for index in coordinate_local.index.astype(str)]
-        coordinate_local['meta_id'] = meta_id
-    else:
-        coordinate_local['meta_id'] = coordinate_local.iloc[:,3]
-        meta_id = coordinate_local.meta_id.unique()
+    Parameters
+    ----------
+    coordinate_table : pandas.DataFrame or str
+        BED-like table, one or more rows per copy.
+    maf : str
+        A single MAF file, or -- with ``separated_maf=True`` -- a directory
+        holding one MAF per chromosome.
+    separated_maf : bool
+        Pick the MAF per chromosome out of the directory ``maf``.
+    target_species : str
+        Row that defines the coordinate system, e.g. ``'Homo_sapiens'``.
+    count_arg : str
+        What to report per base; see :func:`extract_maf`. ``'coverage'``
+        counts the species present in the block **including those whose base
+        is a deletion**, so it answers "how many species align here", not
+        "how many have a base here".
+    species_list : list or None
+        Keep only these species. Before 0.9.0 this argument was delivered to
+        the wrong parameter of the worker (see the note below) and never took
+        effect.
+    e_value_table, internal_id_table : str, DataFrame or None
+        Optional per-copy species sets and identifier mapping.
 
-    grouped = coordinate_local.groupby('meta_id', sort=False)
-    chrom_list = grouped.apply(lambda x: x.iloc[:,0].unique()[0]).tolist()
-    start_list = grouped.apply(lambda x: x.iloc[:,1].tolist()).tolist()
-    end_list = grouped.apply(lambda x: x.iloc[:,2].tolist()).tolist()
-    strand_list = grouped.apply(lambda x: x.iloc[:,5].unique()[0]).tolist()
+    Returns
+    -------
+    list
+        One per-base result per copy, or the output path if saved.
+
+    Notes
+    -----
+    The worker is now called through ``functools.partial`` with keywords.
+    Before 0.9.0 the five fixed arguments were passed positionally in the
+    order ``target_species, count_arg, e_value_df, internal_id_df,
+    species_list`` while the function declared them as ``target_species,
+    count_arg, species_list, e_value_df, internal_id_df``: the last three were
+    rotated, so a ``species_list`` arrived as ``internal_id_df`` and raised
+    ``NameError`` in the worker, and an ``e_value_table`` arrived as
+    ``species_list`` and was turned into a regex of its own column names.
+    """
+    coordinate_local = read_coordinate_table(coordinate_table)
+    meta_id, chrom_list, start_list, end_list, strand_list = group_coordinates(
+        coordinate_local, generate_new_id=generate_new_id
+    )
+    logger.info('extract from maf target: %s', maf)
+
     maf_call_list = []
+    maf_cache = {}
     for chrom in chrom_list:
         if separated_maf == True:
-            maf_file = get_maf_filepath(maf, chrom)
+            if chrom not in maf_cache:
+                # os.listdir() used to run once per copy, not once per chromosome.
+                maf_cache[chrom] = get_maf_filepath(maf, chrom)
+            maf_file = maf_cache[chrom]
         else:
             maf_file = maf
         maf_call_list.append(maf_file)
-    e_value_df = None
+
     if isinstance(e_value_table, str):
         e_value_df = pd.read_csv(e_value_table, sep='\t')
     else:
         e_value_df = e_value_table
-    internal_id_df = None
     if isinstance(internal_id_table, str):
         internal_id_df = pd.read_csv(internal_id_table, sep='\t')
     else:
         internal_id_df = internal_id_table
-    
-    with ProcessPoolExecutor(max_workers=40) as executor:
-        results = executor.map(extract_maf, meta_id, maf_call_list, chrom_list, start_list, end_list, strand_list, repeat(target_species), repeat(count_arg), repeat(e_value_df), repeat(internal_id_df), repeat(species_list))
 
-    maf_out = []
-    for result in results:
-        maf_out.append(result)
-    if save_to_file == True:
-        if isinstance(save_to_file, str):
-            output_filepath = save_to_file
-        else:
-            if isinstance(coordinate_table, str):
-                output_dir = '/'.join(str.split(coordinate_table, sep ='/')[:-1])
-            else: 
-                output_dir = os.path.dirname(os.path.abspath(__file__))
-            output_filepath = f'{output_dir}/maf_output.p'
-        import compress_pickle
-        compress_pickle.dump(maf_out, output_filepath, compression="lzma")
-        print('done, saving maf_out at: ', output_filepath)
-    else:
-        print('done, returning maf_out as object')
-        return maf_out
+    for maf_file in sorted(set(maf_call_list)):
+        index_path = '.'.join(str.split(maf_file, sep='.')[:-1]) + '.mafindex'
+        if not os.path.isfile(index_path):
+            logger.warning(
+                'no index at %s; the workers will each try to build it. '
+                'Call build_maf_index(%r) first.', index_path, maf_file
+            )
+
+    worker = partial(
+        extract_maf,
+        target_species=target_species,
+        count_arg=count_arg,
+        species_list=species_list,
+        e_value_df=e_value_df,
+        internal_id_df=internal_id_df,
+    )
+    workers = worker_count('MA_MAPPER_MAF_WORKERS')
+    logger.info('extracting %s from %d copies with %d workers', count_arg, len(meta_id), workers)
+    with ProcessPoolExecutor(max_workers=workers) as executor:
+        results = executor.map(
+            worker, meta_id, maf_call_list, chrom_list, start_list, end_list, strand_list
+        )
+        maf_out = list(results)
+
+    return save_or_return(maf_out, save_to_file, coordinate_table, 'maf_output.lzma', 'maf_out')
 #%%

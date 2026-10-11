@@ -1,11 +1,13 @@
-#%%
-import sys
-import os
-from tabnanny import verbose
+"""Figures for an overlay matrix: heatmaps, bars, annotations, base counts, logos.
 
-# dead auto-import, module does not exist and OutputRecord is never used
-# from dev.installation.biopython.Bio.Emboss.PrimerSearch import OutputRecord
-sys.path.append('/home/pc575/rds/rds-kzfps-XrHDlpCeVDg/users/pakkanan/phd_project_development/dev/packaging_dir/ma_mapper/')
+Every function either draws into an axes you pass (``matplot_axes``) or makes
+its own figure. ``save_to_file`` takes a path, or ``True`` for a default name
+in the current directory; before 0.9.0 the default wrote into the installed
+package directory, which is read-only in a normal install.
+"""
+
+import os
+
 from ma_mapper import mapper
 import pandas as pd
 import matplotlib
@@ -22,11 +24,15 @@ TwoSlopeNorm = matplotlib.colors.TwoSlopeNorm
 ScalarMappable = matplotlib.cm.ScalarMappable
 #############################################################
 import numpy as np
-if sys.version_info >= (3, 8, 0):
-    from typing import Literal, Tuple, List
-else:
-    from typing_extensions import Literal, Tuple, List
+from typing import Literal
 #%%
+
+
+def _resolve_plot_path(save_to_file, default_name):
+    """Where to write a figure: the given path, or ``default_name`` in the cwd."""
+    if isinstance(save_to_file, str):
+        return save_to_file
+    return os.path.join(os.getcwd(), default_name)
 
 
 #%%
@@ -103,11 +109,8 @@ def plot_heatmap(data: list|np.ndarray|None = None,
     
     if save_to_file == True:
         plt.rcParams['savefig.dpi'] = image_res
-        if isinstance(save_to_file, str):
-            output_filepath = save_to_file
-        else:
-            output_filepath = f'{os.path.dirname(os.path.abspath(__file__))}/overlay.png'
-        plt.savefig(output_filepath) 
+        output_filepath = _resolve_plot_path(save_to_file, 'overlay.png')
+        plt.savefig(output_filepath)
     if show_plot == True:
         plt.rcParams['figure.dpi'] = image_res
         plt.show()
@@ -145,9 +148,9 @@ def plot_bar(data: list|np.ndarray|None = None,
         if isinstance(save_to_file, str):
             output_filepath = save_to_file
         else:
-             output_filepath = f'{os.path.dirname(os.path.abspath(__file__))}/barplot.png'
+            output_filepath = _resolve_plot_path(save_to_file, 'barplot.png')
         plt.rcParams['savefig.dpi'] = image_res
-        plt.savefig(output_filepath)  
+        plt.savefig(output_filepath)
     if show_plot == True:
         plt.rcParams['figure.dpi'] = image_res
         plt.show()
@@ -223,11 +226,12 @@ def plot_colorbar(cmap: str|ListedColormap|LinearSegmentedColormap,
     if tick_label:
         cbar_obj.set_ticklabels(tick_label, fontsize='small')
     
-    if save_to_file == True:
+    if save_to_file:
         plt.rcParams['savefig.dpi'] = image_res
-        if output_filepath is None:
-            output_filepath = f'{os.path.dirname(os.path.abspath(__file__))}/colorbar.png'
-        plt.savefig(output_filepath)  
+        # output_filepath was never assigned before this test, so a save
+        # raised NameError.
+        output_filepath = _resolve_plot_path(save_to_file, 'colorbar.png')
+        plt.savefig(output_filepath)
     if show_plot == True:
         plt.rcParams['figure.dpi'] = image_res
         plt.show()
@@ -278,8 +282,8 @@ def plot_annotation(anno: list|np.ndarray|pd.Series|pd.DataFrame,
         if isinstance(save_to_file, str):
             output_filepath = save_to_file
         else:
-            output_filepath = f'{os.path.dirname(os.path.abspath(__file__))}/annot_bar.png'
-        plt.rcParams['savefig.dpi'] = image_res            
+            output_filepath = _resolve_plot_path(save_to_file, 'annot_bar.png')
+        plt.rcParams['savefig.dpi'] = image_res
         plt.savefig(output_filepath)
     if show_plot == True:
         plt.rcParams['figure.dpi'] = image_res
@@ -317,11 +321,12 @@ def plot_basecount(alignment:np.ndarray|None,
     if ylim is not None:
         ax.set_ylim(ylim[0],ylim[1])
    
-    if save_to_file == True:
+    if save_to_file:
         plt.rcParams['savefig.dpi'] = image_res
-        if output_filepath is None:
-            output_filepath = f'{os.path.dirname(os.path.abspath(__file__))}/barplot.png'
-        plt.savefig(output_filepath)  
+        # output_filepath was never assigned before this test, so a save
+        # raised NameError.
+        output_filepath = _resolve_plot_path(save_to_file, 'barplot.png')
+        plt.savefig(output_filepath)
     if show_plot == True:
         plt.rcParams['figure.dpi'] = image_res
         plt.show()
@@ -360,11 +365,12 @@ def plot_logos(alignment:np.ndarray|None,
     if ylim is not None:
         ax.set_ylim(ylim[0],ylim[1])
     
-    if save_to_file == True:
+    if save_to_file:
         plt.rcParams['savefig.dpi'] = image_res
-        if output_filepath is None:
-            output_filepath = f'{os.path.dirname(os.path.abspath(__file__))}/barplot.png'
-        plt.savefig(output_filepath)  
+        # output_filepath was never assigned before this test, so a save
+        # raised NameError.
+        output_filepath = _resolve_plot_path(save_to_file, 'barplot.png')
+        plt.savefig(output_filepath)
     if show_plot == True:
         plt.rcParams['figure.dpi'] = image_res
         plt.show()
@@ -711,8 +717,7 @@ def plot(data: list|np.ndarray|None = None,
         if isinstance(save_to_file, str):
             output_filepath = save_to_file
         else:
-            output_filepath = f'{os.path.dirname(os.path.abspath(__file__))}/annot_bar.png'
-        print('save1')
+            output_filepath = _resolve_plot_path(save_to_file, 'overlay_composite.png')
         plt.savefig(output_filepath)
         if show_plot == False:
             plt.close()

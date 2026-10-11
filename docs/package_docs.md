@@ -310,3 +310,86 @@ Slicing/Cropping for specific parts of the plot is possible using plot coordinat
 Additionally, the metadata table which contains TE coordinates, can be expanded further with additional information from either external sources or other data matrices transfromed into row-wise data arrays and subsequently converted into plot annotation 
 
 See the tutorials [here](https://github.com/pkncsk/ma_mapper/blob/experimental/script/documentation/tutorial_nb/00overview.md) for more complex usages such as multiple matrix overlays or row annotation.
+---
+
+## Command line
+
+Everything above is also available without writing Python. `--help` on any
+subcommand lists every option with its default.
+
+```bash
+ma-mapper sequence  --coordinates copies.bed --genome hg38.fa --output copies.fasta
+ma-mapper sequence  --repeatmasker hg38.rmsk.tsv --subfamily THE1C MER11A \
+                    --genome hg38.fa --output copies.fasta
+ma-mapper align     --input copies.fasta --threads 8 --output copies.aligned
+ma-mapper overlay   --alignment copies.aligned --data signal.bw --format bigwig \
+                    --output matrix.npy
+ma-mapper plot      --matrix matrix.npy --kind profile --output profile.png
+ma-mapper index-maf --maf chr1.maf              # once, before any parallel run
+ma-mapper info                                  # versions, and which binaries are present
+```
+
+`overlay` writes three files, and the second and third are what make the first
+interpretable a month later:
+
+| file | holds |
+|---|---|
+| `matrix.npy` | the copies × columns matrix |
+| `matrix.rows.tsv` | the coordinates of the copies that survived filtering, in row order |
+| `matrix.alignment.npy` | the filtered alignment, so you can tell a gap from a measured zero |
+
+The filter options (`--filter`, `--col-threshold`, `--col-content-threshold`,
+`--row-threshold`) mirror `mapper.create_filter`, with the same defaults.
+`--legacy-second-pass` reproduces the pre-0.9.0 column arithmetic, for
+rebuilding an old matrix bit-for-bit.
+
+## Parallelism
+
+`extract_vcf`, `extract_maf` and the MAF index build are the only parallel
+parts. They use as many worker processes as the process is allowed CPUs —
+`os.sched_getaffinity`, which under Slurm is the allocation rather than the
+machine — and respect, in order of precedence:
+
+| variable | applies to |
+|---|---|
+| `MA_MAPPER_VCF_WORKERS` | `extract_vcf.vcf_io` |
+| `MA_MAPPER_MAF_WORKERS` | `extract_maf.maf_io` |
+| `MA_MAPPER_WORKERS` | both |
+
+On a shared filesystem more workers mean more I/O, not more speed: the readers
+are I/O bound, and a VCF as large as gnomAD is slow to open, not slow to query.
+
+## Logging
+
+Importing the package configures nothing and writes nothing. Warnings and
+errors reach stderr through the standard library's fallback; for progress
+output, ask for it:
+
+```python
+import ma_mapper
+ma_mapper.configure_logging(logfile='run.log')   # or stream=True for stderr only
+```
+
+or set `MA_MAPPER_LOG=/path/to/run.log` before importing. On the command line,
+`--verbose` and `--logfile` do the same.
+
+## Semantics worth checking before publishing a number
+
+| thing | what it actually does |
+|---|---|
+| `extract_bam(offset=...)` | **defaults to 5**, shifting every read 5 bp downstream |
+| `row_threshold` | non-gap *density within a copy's own span* — correlated with element age, not a length filter |
+| `normalise(denominator='alignment')` | divides by the copies with a base in the column, `nan` values included; `'measured'` divides by the copies with a finite value |
+| `normalise(method='perc_coverage')` | counts non-zero cells, so a genuine 0.0 reads as absent |
+| MAF `count_arg='coverage'` | counts species present in the block, deletions included |
+| `generate_new_id=True` | one copy per row: a fragmented element is *not* reassembled |
+
+## Reproducing results from before 0.9.0
+
+Three fixes in 0.9.0 change numbers: minus-strand VCF extraction, BAM read
+counts above 255, and the second column pass of `create_filter`. The first two
+were wrong and have no reproduction switch. For the third, pass
+`legacy_second_pass=True` to `create_filter` (or `--legacy-second-pass` on the
+command line); that path reproduces the old masks exactly, which was checked on
+MER11A, MER11C, LFSINE_Vert, MamRep434 and L1PA2 at three threshold settings.
+See the [CHANGELOG](../CHANGELOG.md).

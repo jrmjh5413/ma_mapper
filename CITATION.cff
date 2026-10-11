@@ -1,0 +1,22 @@
+cff-version: 1.2.0
+title: "ma_mapper: mapping genome-wide data onto multiple alignments of transposable elements"
+message: "If you use this software, please cite it as below."
+type: software
+authors:
+  - family-names: Chansongkrow
+    given-names: Pakkanan
+    orcid: ""
+  - family-names: Jaksina
+    given-names: Jeremi
+    affiliation: "Department of Genetics, University of Cambridge"
+    email: jj515@cam.ac.uk
+repository-code: "https://github.com/pkncsk/ma_mapper"
+license: MIT
+version: 0.9.0
+date-released: "2026-10-11"
+keywords:
+  - transposable elements
+  - multiple sequence alignment
+  - ChIP-seq
+  - conservation
+  - bioinformatics

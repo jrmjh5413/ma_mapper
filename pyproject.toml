@@ -1,27 +1,97 @@
-#pyproject v.0.0.1
-[tool.poetry]
-name = "ma-mapper"
-version = "0.8.8.6"
-description = "Multiple Alignment Mapper"
-authors = ["pkncsk <pkncsk@gmail.com>"]
-license = "MIT"
-readme = "README.md"
-
-[tool.poetry.dependencies]
-python = "*"
-biopython = "*"
-compress-pickle = "*"
-cyvcf2 = "*"
-h5py = "*"
-logomaker = "*"
-matplotlib = "*"
-numpy ="*"
-pandas = "*"
-pybedtools = "*"
-pybigwig = "*"
-pysam = "*"
-scipy = "*"
-
 [build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
+requires = ["setuptools>=64"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ma-mapper"
+dynamic = ["version"]
+description = "Map genome-wide data onto a multiple alignment of transposable elements"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [
+    { name = "Pakkanan Chansongkrow", email = "pkncsk@gmail.com" },
+    { name = "Jeremi Jaksina", email = "jj515@cam.ac.uk" },
+]
+maintainers = [{ name = "Jeremi Jaksina", email = "jj515@cam.ac.uk" }]
+keywords = [
+    "transposable elements",
+    "multiple sequence alignment",
+    "ChIP-seq",
+    "conservation",
+    "genomics",
+    "bioinformatics",
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: POSIX :: Linux",
+    "Operating System :: MacOS :: MacOS X",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Bio-Informatics",
+]
+dependencies = [
+    "numpy>=1.21",
+    "pandas>=1.3",
+    "biopython>=1.80",
+    "h5py>=3.7",
+    "compress-pickle>=2.1",
+    "matplotlib>=3.6",
+    "logomaker>=0.8",
+    "pysam>=0.21",
+    "pyBigWig>=0.3.18",
+    "pybedtools>=0.9",
+    "cyvcf2>=0.30",
+]
+
+[project.optional-dependencies]
+# The extractors import their reader lazily, so a subset of these is enough to
+# use the formats it covers.
+bam = ["pysam>=0.21"]
+bigwig = ["pyBigWig>=0.3.18"]
+bed = ["pybedtools>=0.9"]
+vcf = ["cyvcf2>=0.30"]
+plots = ["matplotlib>=3.6", "logomaker>=0.8"]
+dev = ["pytest>=7.0", "pytest-cov>=4.0", "ruff>=0.4"]
+
+[project.scripts]
+ma-mapper = "ma_mapper.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/pkncsk/ma_mapper"
+Documentation = "https://github.com/pkncsk/ma_mapper/blob/main/docs/package_docs.md"
+Issues = "https://github.com/pkncsk/ma_mapper/issues"
+
+[tool.setuptools]
+packages = ["ma_mapper"]
+
+[tool.setuptools.dynamic]
+version = { attr = "ma_mapper.__version__" }
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra"
+markers = [
+    "requires_bedtools: needs the bedtools binary on PATH",
+    "requires_mafft: needs the mafft binary on PATH",
+]
+
+[tool.ruff]
+line-length = 110
+target-version = "py310"
+
+[tool.ruff.lint]
+# The package predates these rules; this is the subset worth enforcing now.
+select = ["E", "F", "W", "B"]
+ignore = [
+    "E501",  # long lines in the pre-existing plotting code
+    "E741",  # single-letter variable names in the pre-existing code
+    "B008",
+]
+
+[tool.ruff.lint.per-file-ignores]
+"ma_mapper/custom_cmap.py" = ["F405", "F403"]

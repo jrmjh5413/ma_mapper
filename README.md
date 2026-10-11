@@ -1,67 +1,211 @@
 # `ma_mapper`
 Multiple Alignment Mapper
 
+A Python package for mapping genome-wide data onto a multiple alignment of
+transposable elements.
 
-A python package for mapping genome-wide data onto multiple alignment of transposable elements.
+A TE family is hundreds to thousands of copies of the same ancestral sequence,
+each mutated, truncated and interrupted differently. Aligning signal to the
+family's **consensus** squashes them all onto one idealised coordinate; aligning
+it to a **multiple alignment of the copies themselves** keeps every copy as its
+own row, and puts each measured value in the column of the base it was measured
+on. What comes out is a copies × columns matrix you can slice, sort, split and
+plot.
 
-This multiple alignment of THE1C for example:
+This multiple alignment of THE1C, for example:
 
 <img src="docs/img/the1c_aln.png" alt="THE1C alignment" style="width:50%;" />
 
-
-can be overlayed by genome-wide data such as TF motif prediction, conservation socre, ChIP-exo mapped reads, common base frequencies, alternater allele frequencies, and more:
+can be overlaid with transcription factor motif predictions, conservation
+scores, ChIP-exo read pile-ups, cross-species base frequencies, population
+allele frequencies, and anything else that comes as BED, BAM, bigWig, VCF or
+MAF:
 
 <p>
-  <img src="docs/img/motif.png" alt="THE1C alignment" style="width:30%; display:inline-block;"/>
-  <img src="docs/img/bigwig.png" alt="THE1C signal" style="width:30%; display:inline-block;"/>
-  <img src="docs/img/bam.png" alt="THE1C signal" style="width:30%; display:inline-block;"/>
-  <img src="docs/img/maf.png" alt="THE1C signal" style="width:30%; display:inline-block;"/>
-  <img src="docs/img/vcf.png" alt="THE1C signal" style="width:30%; display:inline-block;"/>
+  <img src="docs/img/motif.png" alt="motif overlay" style="width:30%; display:inline-block;"/>
+  <img src="docs/img/bigwig.png" alt="bigWig overlay" style="width:30%; display:inline-block;"/>
+  <img src="docs/img/bam.png" alt="BAM overlay" style="width:30%; display:inline-block;"/>
+  <img src="docs/img/maf.png" alt="MAF overlay" style="width:30%; display:inline-block;"/>
+  <img src="docs/img/vcf.png" alt="VCF overlay" style="width:30%; display:inline-block;"/>
 </p>
 
+## Contents
 
-## Quick links
-- [Dependencies](#dependencies)
 - [Installation](#installation)
+- [Quick start](#quick-start)
+- [What the matrix means](#what-the-matrix-means)
+- [Data formats](#data-formats)
+- [Things worth knowing before you trust a number](#things-worth-knowing-before-you-trust-a-number)
 - [Package structure](#package-structure)
-- [Usage](#usage)
-- [Documentaiton quick links](#documentation-quick-links)
-
-## Dependencies
-- `python` 3.10
-- `biopython` 1.83
-- `compress-pickle` 2.1.0
-- `cyvcf2` 0.30.28
-- `h5py` 3.7.0
-- `logomaker` 0.8
-- `matplotlib` 3.8.4
-- `numpy` 1.21.5
-- `pandas` 1.3.5
-- `pybedtools` 0.10.0
-- `pybigwig` 0.3.23
-- `pysam` 0.22.0
-- `scipy` 1.7.3
+- [Documentation](#documentation)
+- [Citation](#citation)
+- [Provenance and licence](#provenance-and-licence)
 
 ## Installation
-To install this package, use the following command to install on a python environment:
+
 ```bash
-pip install git+https://github.com/pkncsk/ma_mapper@experimental
+pip install ma-mapper
 ```
+
+From a checkout, for development:
+
+```bash
+pip install -e ".[dev]"
+pytest
+```
+
+Python 3.10 or newer. Two external binaries are used when the formats that need
+them are used, and neither is a Python dependency:
+
+| binary | needed for | install |
+|---|---|---|
+| `bedtools` | BED overlays (via pybedtools) | `conda install -c bioconda bedtools` |
+| `mafft` | building alignments with `ma-mapper align` | `conda install -c bioconda mafft` |
+
+`ma-mapper info` prints the version of everything installed and says which of
+these two it can find.
+
+## Quick start
+
+### From the command line
+
+```bash
+# 1. the genomic sequence of every copy, with its coordinates in the header
+ma-mapper sequence --repeatmasker hg38.rmsk.tsv --subfamily THE1C \
+                   --genome hg38.fa --output THE1C.fasta
+
+# 2. align them
+ma-mapper align --input THE1C.fasta --threads 8 --output THE1C.aligned
+
+# 3. map a dataset onto the alignment
+ma-mapper overlay --alignment THE1C.aligned \
+                  --data hg38.phyloP447way.bw --format bigwig \
+                  --output THE1C_phyloP.npy
+
+# 4. look at it
+ma-mapper plot --matrix THE1C_phyloP.npy --kind profile --output THE1C_phyloP.png
+```
+
+Step 3 writes three files: the matrix, `THE1C_phyloP.rows.tsv` (which copy each
+row is) and `THE1C_phyloP.alignment.npy` (which cells are gaps). A matrix
+without those two is not interpretable later.
+
+### From Python
+
+```python
+from ma_mapper import mapper
+
+matrix, copies, alignment = mapper.map_and_overlay(
+    alignment='THE1C.aligned',
+    data_file='hg38.phyloP447way.bw',
+    data_format='bigwig',
+    return_details=True,
+)
+
+# mean conservation per alignment column, over the copies that have a base there
+profile = mapper.normalise(alignment, matrix, method='average')
+```
+
+Each step is also usable on its own: `sequence_alignment.sequence_io` to fetch
+sequence, `mapper.parse_and_filter` to get an alignment matrix and its copies,
+one of the `extract_*` modules to read a dataset, `mapper.map_data` to put the
+two together, and `plots` to draw the result.
+
+## What the matrix means
+
+Row *i* is one copy. Column *j* is one column of the multiple alignment. Cell
+(*i*, *j*) is the value measured at the base copy *i* has in column *j*, in the
+copy's own 5'→3' orientation — a minus-strand copy is reverse complemented, and
+its fragments are read right to left, so column 0 is the start of the element
+and not the leftmost base in the genome.
+
+A cell where the copy has a gap is 0. A cell where the copy has a base the
+dataset does not cover is whatever the dataset returns there, which for bigWig
+is `nan` and for BED is 0. That difference matters: see below.
+
+`parse_alignment` codes the alignment itself as 0 gap, 1 A, 2 C, 3 T, 4 G, 5 N,
+so `alignment > 0` is the non-gap mask.
+
+## Data formats
+
+| `data_format` | reads | value per base |
+|---|---|---|
+| `bigwig` | bigWig | the track's value, `nan` where it has no data |
+| `bed` | BED (needs `bedtools`) | sum of the scores of the features covering the base; a `.` score counts as 1 |
+| `vcf` | tabix-indexed VCF | sum of an INFO field over the SNPs at that base, 0 elsewhere |
+| `read_sum`, `read_forward`, `read_reverse`, `read_max`, `read_min` | indexed BAM | number of read 5' ends, forward/reverse relative to the **copy's** strand |
+| `normal_*` | indexed BAM | the same ends smoothed with a Gaussian |
+| `maf` | MAF + Biopython index | a per-column summary across species: `coverage`, `common_freq`, `ref_freq`, `base_count`, ... |
+
+## Things worth knowing before you trust a number
+
+These are properties of the method, not bugs; each one has bitten someone.
+
+- **The BAM `offset` is 5 by default**, not 0. Every read's 5' end is shifted
+  five bases downstream, which suits a Tn5-style correction and nothing else.
+  Pass `offset=0` for raw ends.
+- **`row_threshold` is a density, not a length.** A copy survives if its
+  non-gap bases are dense *within its own span*, so a short intact fragment
+  passes and a full-length, deletion-riddled copy fails. The threshold
+  therefore correlates with element age: at 0.5 an ancient SINE loses most of
+  its copies. For anything stratified by age use 0.10, or no row filter, and
+  say which.
+- **`normalise(method='average')` divides by the number of copies with a base
+  in the column, including those whose value is `nan`.** A track that does not
+  cover part of the family then reads as a low value rather than as missing.
+  Pass `denominator='measured'` to divide by the copies that actually have a
+  value.
+- **`perc_coverage` counts a genuine 0.0 as absent**, because it counts
+  non-zero cells. It is a coverage measure only for data where 0 means "nothing
+  here".
+- **MAF `coverage` counts the species present in the alignment block**,
+  including those whose base at that column is a deletion. It answers "how many
+  species align here", not "how many have a base here".
+- **Above roughly 50,000 copies MAFFT's default settings run out of memory**,
+  and so does the row clustering in any downstream plot. See
+  [Aligning large TE families](docs/aligning_large_families.md) for the profile
+  alignment route, and never use `hmmalign --trim`: it deletes bases and breaks
+  the one invariant the whole package rests on.
+- **The alignment and the data must describe the same copies, in the same
+  order.** `map_data` checks that each copy's value count equals its non-gap
+  base count and names the copy that disagrees. Take the error seriously: it
+  usually means two files were built from different copy sets.
+
 ## Package structure
-`ma_mapper` is ultimately a wrapper of various external packages, guiding them to work under under the multiple alignment mapping framework. The package itself is separated into modules and submodules based on their main functions on the framework. Notably, the data extraction and data mapping/overlay are streamlined into one module as shown below:
 
-<img src="docs/img/packagestructure.png" alt="THE1C alignment" style="width:70%;" />
+`ma_mapper` wraps the file-format readers (pysam, pyBigWig, pybedtools, cyvcf2,
+Biopython) and gives them a common framework: extract per base, then map onto
+alignment columns.
 
-## Usage
+<img src="docs/img/packagestructure.png" alt="package structure" style="width:70%;" />
 
-## Documentation quick links
+| module | does |
+|---|---|
+| `mapper` | parse and filter an alignment, map extracted data onto it, `map_and_overlay` |
+| `sequence_alignment` | coordinates → sequence → alignment |
+| `extract_bed`, `extract_bam`, `extract_bigwig`, `extract_vcf`, `extract_maf` | one dataset format each |
+| `plots` | heatmaps, profiles, annotations, base counts, sequence logos |
+| `cli` | the `ma-mapper` command |
+| `utility`, `custom_cmap` | RepeatMasker and age tables, colour maps |
+
+## Documentation
+
 - [Getting started](docs/gettingstarted.md)
-- [Package documentations](docs/package_docs.md)
+- [Package documentation](docs/package_docs.md) — every function and parameter
 - [Aligning large TE families](docs/aligning_large_families.md)
-## Under construction
-- [Tutorials]()
-- [API references]()
+- [CHANGELOG](CHANGELOG.md) — read the 0.9.0 entry if you have results from an
+  earlier version; three fixes in it change numbers
 
-## License
-This package is licensed under the MIT License. 
+## Citation
 
+See [`CITATION.cff`](CITATION.cff).
+
+## Provenance and licence
+
+`ma_mapper` was written by Pakkanan Chansongkrow and is described in their PhD
+thesis (University of Cambridge, 2024). The multiple-alignment overlay approach
+it implements comes from the Imbeault lab (Ecco *et al.*, 2016). Later
+maintenance, the large-family alignment route, the command line, the test suite
+and the 0.9.0 fixes are by Jeremi Jaksina.
+
+MIT licence; see [`LICENSE`](LICENSE).

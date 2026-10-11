@@ -1,0 +1,47 @@
+name: tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest]
+        python-version: ["3.10", "3.11", "3.12"]
+        include:
+          - os: macos-latest
+            python-version: "3.12"
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      # pybedtools calls the bedtools binary, which is not a Python dependency.
+      # Where it is missing the tests that need it are skipped, not failed.
+      - name: Install bedtools
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y bedtools
+
+      - name: Install the package
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[dev]"
+
+      - name: Lint
+        run: ruff check ma_mapper tests
+
+      - name: Tests
+        run: pytest -q --cov=ma_mapper --cov-report=term-missing
+
+      - name: The command line runs
+        run: |
+          ma-mapper --version
+          ma-mapper info

@@ -1,16 +1,44 @@
-##################################
+# Build and packaging
+/build/
+/dist/
+*.egg-info/
+__pycache__/
+*.pyc
 
-# for experimental branch
-#/script/
-#/test/
-/_unused/
-/data/
-# vscode/environment session
-*.code-workspace
+# Environments and editors
 /.venv/*
 /.vscode/*
+*.code-workspace
 /.ipynb_checkpoints/
-*.pyc
-/script/
 /.lh/*
 /.history/*
+
+# Logs written by callers (the package no longer creates these itself)
+*.log
+
+# Data: nothing generated or downloaded belongs in the repository
+/data/
+/_unused/
+*.npy
+*.npz
+*.h5
+*.lzma
+*.bed
+*.bam
+*.bam.bai
+*.bw
+*.bigWig
+*.vcf
+*.vcf.gz
+*.maf
+*.mafindex
+*.fasta
+*.fa
+*.fa.fai
+*.aligned
+
+# Test and coverage artefacts
+/.pytest_cache/
+/.coverage
+/htmlcov/
+/.ruff_cache/
