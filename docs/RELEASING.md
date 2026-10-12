@@ -67,14 +67,14 @@ numbered steps are what is left to do by hand.
 
    Then confirm `pip install ma-mapper` works from a clean environment.
 
-8. **Zenodo** (needs the GitHub–Zenodo link enabled once, under Settings →
+8. **Zenodo** (needs the GitHub-Zenodo link enabled once, under Settings ->
    Webhooks for the repository): enabling it means every GitHub *release* is
    archived automatically and gets a DOI. Create the release from the tag, then
    put the resulting DOI in `CITATION.cff` (`doi:`), the README and the paper's
    availability statement. `.zenodo.json` supplies the metadata.
 
-9. **Bioconda** (needs a GitHub fork): follow `recipe/README.md` — the recipe
-   is written, and only the version and the sdist checksum have to be filled in.
+9. **Bioconda** (needs a GitHub fork): follow `recipe/README.md`. The recipe is
+   written, and only the version and the sdist checksum have to be filled in.
    Bioconda builds from PyPI, so step 7 comes first.
 
 10. **Check the availability claims the paper will make**: the repository is
@@ -91,9 +91,9 @@ numbered steps are what is left to do by hand.
 | Archived at Zenodo/Figshare/Software Heritage | step 8 |
 | Installable without significant investment | PyPI and Bioconda, steps 7 and 9; verified by step 5 |
 | Test data and documentation, including every optional parameter | `tests/`, `examples/`, `docs/package_docs.md`, `--help` on every subcommand |
-| How to reproduce the paper's figures | one script per figure, under `paper/` — **not written yet, needs the figure** |
+| How to reproduce the paper's figures | one script per figure, under `paper/`. **Not written yet, needs the figure** |
 | Data availability statement | the case study must use public data only |
-| AI-use declaration (ISCB policy) | the supplement, the cover letter and the Methods or Acknowledgements. Note the policy's limit: *"It is not acceptable to use LLMs or related technologies to draft papers"* — the manuscript text is written by the authors |
+| AI-use declaration (ISCB policy) | the supplement, the cover letter and the Methods or Acknowledgements. Note the policy's limit: *"It is not acceptable to use LLMs or related technologies to draft papers"*. The manuscript text is written by the authors |
 
 ## Version numbering
 

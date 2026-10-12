@@ -10,7 +10,7 @@ basis of the contribution statement in any paper describing the tool.
 | Layer | Origin |
 |---|---|
 | The multiple-alignment overlay approach | Imbeault lab (Ecco *et al.*, 2016) |
-| The `ma_mapper` package that implements it | **Pakkanan Chansongkrow**, 2023–2025; described in their PhD thesis (University of Cambridge, 2024) |
+| The `ma_mapper` package that implements it | **Pakkanan Chansongkrow**, 2023 to 2025; described in their PhD thesis (University of Cambridge, 2024) |
 | Everything in this document | Jeremi Jaksina |
 
 The original lives at **`github.com/pkncsk/ma_mapper`**. This fork is
@@ -47,7 +47,7 @@ In total, against `8f7d870`: **44 files, +5,850 / −1,741 lines**. Per module:
 | `__init__.py` | 17 | +84 / −16 |
 | `plots.py` | 722 | +38 / −32 |
 | `custom_cmap.py`, `gzmaf.py` | 524, 194 | untouched |
-| `_io_common.py`, `cli.py` | — | new, 181 and 378 lines |
+| `_io_common.py`, `cli.py` | not present | new, 181 and 378 lines |
 
 ---
 
@@ -83,8 +83,8 @@ reproduction switch: the old behaviour was simply wrong.
 ### A2 · Read counts above 255 (`extract_bam.py`, `720cd77`)
 
 The read profile was `uint8`, which wraps silently: 300 reads at one base were
-reported as 44. The smoothed profile was `float16` — three decimal digits,
-saturating at 65504. Now `uint32` and `float32`. Regression test:
+reported as 44. The smoothed profile was `float16`, which carries three
+decimal digits and saturates at 65504. Now `uint32` and `float32`. Regression test:
 `tests/test_extractors.py::TestBam::test_read_counts_above_255_do_not_wrap`.
 
 ### A3 · The second column pass of `create_filter` (`mapper.py`, `720cd77`)
@@ -103,7 +103,7 @@ recount occupancy among the copies that survived the row filter. Instead it
 **The old masks remain reproducible exactly**: `create_filter(...,
 legacy_second_pass=True)`, or `ma-mapper overlay --legacy-second-pass`. That
 path was compared against the original code on five real families at three
-threshold settings — every row and column mask identical.
+threshold settings, and every row and column mask was identical.
 
 Effect of the correction on the surviving column count (row counts are
 unchanged except MamRep434 at the package default, 1796 → 1795):
@@ -116,7 +116,7 @@ unchanged except MamRep434 at the package default, 1796 → 1795):
 | LFSINE_Vert | 603 → 737 | 516 → 363 | 168 → 146 |
 | MamRep434 | 789 → 682 | 673 → 523 | 169 → 171 |
 
-Under 1 % on young compact families, 15–30 % on the two ancient ones.
+Under 1 % on young compact families, 15 to 30 % on the two ancient ones.
 
 ---
 
@@ -148,7 +148,7 @@ test.
   applied the row mask to the coordinate table positionally; a copy split into
   blocks contributes one coordinate row per block, so the mask was the wrong
   length (`IndexError: Boolean index has wrong length`). Both FASTA conventions
-  are now handled — one record per copy with the fragments in the header, and
+  are now handled: one record per copy with the fragments in the header, and
   one record per fragment.
 - **`map_and_overlay(coordinate_file=…)` paired the wrong copy with the wrong
   data.** The permutation was built as the position of each alignment row in
@@ -164,8 +164,8 @@ test.
 - **`base_count` crashed on an N outside the first column**, because
   `np.bincount(..., minlength=5)` sized the output from the first column alone.
 - `map_data` now states which copy has how many values against how many
-  non-gap bases, instead of raising a bare numpy broadcast error — or, when the
-  counts coincide, quietly mis-assigning rows.
+  non-gap bases. Before, a mismatch raised a bare numpy broadcast error, and
+  counts that coincided mis-assigned rows quietly.
 - The iterative filter could not be reached through `map_and_overlay` at all
   (`filter_mode` was never forwarded).
 
@@ -212,7 +212,7 @@ test.
   internal-id table was given: a list of *N* subfamilies returned the whole
   table *N* times.
 - `parse_alignment_to_fasta` wrote gaps as `N` and raised `KeyError` on a
-  genuine N — its mapping had 0 as N and no entry for 5.
+  genuine N, because its mapping had 0 as N and no entry for 5.
 - `mafft_align` filled `--threadtb` and `--threadit` with the value of
   `nthread`, producing `--threadb None` when they were set alone.
 - `sequence_io(save_to_file=True)` built the output path by appending
@@ -240,13 +240,13 @@ Not bug fixes; decisions, listed so nothing is a surprise.
 
 | what | was | now |
 |---|---|---|
-| Logging | importing the package attached a `FileHandler` writing `ma_mapper.log` into the current directory — it failed where that directory is read-only, and littered every directory it ran in | no handler, no file; WARNING and above still reach stderr through the standard library fallback. `configure_logging(level, logfile)` or `MA_MAPPER_LOG` opt in |
+| Logging | importing the package attached a `FileHandler` writing `ma_mapper.log` into the current directory. It failed where that directory is read-only, and littered every directory it ran in | no handler, no file; WARNING and above still reach stderr through the standard library fallback. `configure_logging(level, logfile)` or `MA_MAPPER_LOG` opt in |
 | Worker processes | 40, hardcoded in three extractors | the CPUs the process may use (`os.sched_getaffinity`, i.e. the Slurm allocation), overridable with `MA_MAPPER_WORKERS`, `MA_MAPPER_VCF_WORKERS`, `MA_MAPPER_MAF_WORKERS` |
-| Genome access | `SeqIO.to_dict` loaded the whole FASTA into memory — gigabytes of hg38 to fetch a few hundred bases | read through the `.fai` index with pysam, falling back to the old route with a warning |
+| Genome access | `SeqIO.to_dict` loaded the whole FASTA into memory, gigabytes of hg38 to fetch a few hundred bases | read through the `.fai` index with pysam, falling back to the old route with a warning |
 | `normalise` | always divided by the copies with a base in the column, `nan` values included | same default, plus `denominator='measured'` to divide by the copies with a finite value |
 | `repeatmasker_prep` | a hardcoded human chromosome list, silently dropping everything in any other assembly | `main_chr` and `discard_class` parameters, human as the default |
 | Overlay canvas / alignment matrix | `float64` / `float64` | `float32` / `uint8`, on the two largest arrays in the pipeline |
-| Fragment order | taken as given | sorted into ascending genomic order, with a warning when that was necessary — the minus-strand handling reverses fragment order and is only correct for sorted input |
+| Fragment order | taken as given | sorted into ascending genomic order, with a warning when that was necessary. The minus-strand handling reverses fragment order and is only correct for sorted input |
 | `*_io` side effects | added a `meta_id` column to the caller's DataFrame | the input frame is left alone |
 | VCF handles | one `cyvcf2.VCF` open per window, i.e. per copy | one per process, per file. The old pattern re-read the tabix index and the gnomAD header once per copy; CSD3 support reported the resulting load on 2026-08-02 |
 | `map_data` type sniffing | every element of every copy, in pure Python | one value per copy |
@@ -267,7 +267,7 @@ Not bug fixes; decisions, listed so nothing is a surprise.
   fragment order or offset cannot pass unnoticed. Every item in sections A and
   B has a test.
 - **Continuous integration** (`.github/workflows/ci.yml`): Linux on Python
-  3.10–3.12 plus macOS, ruff, pytest, and a check that the command line runs.
+  3.10 to 3.12 plus macOS, ruff, pytest, and a check that the command line runs.
 - **Packaging**: PEP 621 `pyproject.toml` with a console entry point and
   per-format extras; `setup.py` removed, because the two disagreed about the
   package name. The wheel builds clean.
@@ -275,13 +275,13 @@ Not bug fixes; decisions, listed so nothing is a surprise.
   rather than by every worker process at the same time, plus a warning when it
   is missing.
 - **`_io_common.py`**, the shared coordinate handling: five copies of the same
-  reader, grouper and save logic — and therefore five copies of the same three
-  defects — became one.
+  reader, grouper and save logic, and therefore five copies of the same three
+  defects, became one.
 - **Documentation**: `CHANGELOG.md`, `CITATION.cff`, this file,
   [`aligning_large_families.md`](aligning_large_families.md) (measured memory
   scaling of MAFFT's defaults, the profile-alignment route above ~50,000
   copies, the second quadratic wall in row ordering), a rewritten `README.md`
-  with a "things worth knowing before you trust a number" section, and new
+  with a "defaults and semantics" section, and new
   sections in [`package_docs.md`](package_docs.md) on the command line,
   parallelism, logging and semantics.
 - **`examples/`**: `toy_end_to_end.py`, which builds a chromosome, a family and
@@ -327,5 +327,5 @@ against recorded output:
   strand) from
   `/rds/project/rds-XrHDlpCeVDg/users/jeremi/02-ABCDom/01-data/00-ma_mapper/subfam_matrices_000/LTR10A/metadata.tsv`,
   against `hg38.fa` and `hg38.phyloP447way.bw`, with sampled copies compared
-  base by base to a direct pyBigWig read — which is what `examples/verify_overlay.py`
-  does for any dataset.
+  base by base to a direct pyBigWig read. That is what
+  `examples/verify_overlay.py` does for any dataset.

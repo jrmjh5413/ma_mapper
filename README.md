@@ -35,7 +35,7 @@ MAF:
 - [Quick start](#quick-start)
 - [What the matrix means](#what-the-matrix-means)
 - [Data formats](#data-formats)
-- [Things worth knowing before you trust a number](#things-worth-knowing-before-you-trust-a-number)
+- [Defaults and semantics](#defaults-and-semantics)
 - [Package structure](#package-structure)
 - [Documentation](#documentation)
 - [Citation](#citation)
@@ -115,7 +115,7 @@ two together, and `plots` to draw the result.
 
 Row *i* is one copy. Column *j* is one column of the multiple alignment. Cell
 (*i*, *j*) is the value measured at the base copy *i* has in column *j*, in the
-copy's own 5'→3' orientation — a minus-strand copy is reverse complemented, and
+copy's own 5'->3' orientation. A minus-strand copy is reverse complemented and
 its fragments are read right to left, so column 0 is the start of the element
 and not the leftmost base in the genome.
 
@@ -137,39 +137,16 @@ so `alignment > 0` is the non-gap mask.
 | `normal_*` | indexed BAM | the same ends smoothed with a Gaussian |
 | `maf` | MAF + Biopython index | a per-column summary across species: `coverage`, `common_freq`, `ref_freq`, `base_count`, ... |
 
-## Things worth knowing before you trust a number
+## Defaults and semantics
 
-These are properties of the method, not bugs; each one has bitten someone.
+Some defaults and definitions decide what a number means. The two that catch
+people most often: the BAM `offset` is **5**, not 0, so every read is shifted
+five bases downstream, and `row_threshold` is a non-gap **density** within each
+copy's own span, which correlates with element age rather than with length.
 
-- **The BAM `offset` is 5 by default**, not 0. Every read's 5' end is shifted
-  five bases downstream, which suits a Tn5-style correction and nothing else.
-  Pass `offset=0` for raw ends.
-- **`row_threshold` is a density, not a length.** A copy survives if its
-  non-gap bases are dense *within its own span*, so a short intact fragment
-  passes and a full-length, deletion-riddled copy fails. The threshold
-  therefore correlates with element age: at 0.5 an ancient SINE loses most of
-  its copies. For anything stratified by age use 0.10, or no row filter, and
-  say which.
-- **`normalise(method='average')` divides by the number of copies with a base
-  in the column, including those whose value is `nan`.** A track that does not
-  cover part of the family then reads as a low value rather than as missing.
-  Pass `denominator='measured'` to divide by the copies that actually have a
-  value.
-- **`perc_coverage` counts a genuine 0.0 as absent**, because it counts
-  non-zero cells. It is a coverage measure only for data where 0 means "nothing
-  here".
-- **MAF `coverage` counts the species present in the alignment block**,
-  including those whose base at that column is a deletion. It answers "how many
-  species align here", not "how many have a base here".
-- **Above roughly 50,000 copies MAFFT's default settings run out of memory**,
-  and so does the row clustering in any downstream plot. See
-  [Aligning large TE families](docs/aligning_large_families.md) for the profile
-  alignment route, and never use `hmmalign --trim`: it deletes bases and breaks
-  the one invariant the whole package rests on.
-- **The alignment and the data must describe the same copies, in the same
-  order.** `map_data` checks that each copy's value count equals its non-gap
-  base count and names the copy that disagrees. Take the error seriously: it
-  usually means two files were built from different copy sets.
+The full list, with the measured effect of each, is in
+[docs/semantics.md](docs/semantics.md). It is worth reading once before
+publishing a number from this package.
 
 ## Package structure
 
@@ -182,7 +159,7 @@ alignment columns.
 | module | does |
 |---|---|
 | `mapper` | parse and filter an alignment, map extracted data onto it, `map_and_overlay` |
-| `sequence_alignment` | coordinates → sequence → alignment |
+| `sequence_alignment` | coordinates to sequence to alignment |
 | `extract_bed`, `extract_bam`, `extract_bigwig`, `extract_vcf`, `extract_maf` | one dataset format each |
 | `plots` | heatmaps, profiles, annotations, base counts, sequence logos |
 | `cli` | the `ma-mapper` command |
@@ -191,18 +168,20 @@ alignment columns.
 ## Documentation
 
 - [Getting started](docs/gettingstarted.md)
-- [Package documentation](docs/package_docs.md) — every function and parameter
-- [Tutorial](docs/tutorial.md) — a toy family in a minute, then a real one
-- [API reference](docs/api_reference/01overview.md) — every function and every
+- [Package documentation](docs/package_docs.md): every function and parameter
+- [Tutorial](docs/tutorial.md): a toy family in a minute, then a real one
+- [Defaults and semantics](docs/semantics.md): what the defaults mean for a
+  number, in one place
+- [API reference](docs/api_reference/01overview.md): every function and every
   parameter ([what 0.9.0 added](docs/api_reference/10new_in_0.9.0.md))
-- [Notebook tutorials](docs/tutorials/00overview.md) — six notebooks, written
-  against lab paths that need substituting
+- [Notebook tutorials](docs/tutorials/00overview.md): six notebooks written
+  against lab paths, which need substituting
 - [Aligning large TE families](docs/aligning_large_families.md)
 - [Releasing](docs/RELEASING.md)
-- [Changes from the original `ma_mapper`](docs/CHANGES_FROM_UPSTREAM.md) — what
+- [Changes from the original `ma_mapper`](docs/CHANGES_FROM_UPSTREAM.md): what
   this fork changes and what it does not, with the provenance of each layer
-- [CHANGELOG](CHANGELOG.md) — read the 0.9.0 entry if you have results from an
-  earlier version; three fixes in it change numbers
+- [CHANGELOG](CHANGELOG.md). Read the 0.9.0 entry if you have results from an
+  earlier version. Three of its fixes change numbers.
 
 ## Citation
 

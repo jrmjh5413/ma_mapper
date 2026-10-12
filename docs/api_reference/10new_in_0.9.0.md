@@ -1,7 +1,7 @@
 # New in 0.9.0
 
 Parameters and functions that the rest of this reference does not cover. Pages
-01–09 document 0.8.x and remain accurate for everything they describe.
+01 to 09 document 0.8.x and remain accurate for everything they describe.
 
 ## `mapper.create_filter`
 
@@ -14,15 +14,15 @@ than recounting, judged `col_content_threshold` against the original copy
 count, and left each copy's last non-gap column out of the span denominator.
 Set it to rebuild a matrix built before 0.9.0 bit-for-bit; leave it alone for
 new work. The difference is under 1 % of columns on young compact families and
-15–30 % on ancient ones (`../CHANGES_FROM_UPSTREAM.md` section A3).
+15 to 30 % on ancient ones (`../CHANGES_FROM_UPSTREAM.md` section A3).
 
 ## `mapper.map_and_overlay`
 
 `ma_mapper.mapper.map_and_overlay(alignment, data_file, data_format, filter=True, coordinate_file=None, extension_length=None, source_fasta=None, filter_mode='one_pass', return_details=False, **kwargs)`
 
 **data_format : str**
-One of `mapper.DATA_FORMATS`: `bigwig`, `bed`, `maf`, `vcf`, or a BAM readout —
-`read_sum`, `read_max`, `read_min`, `read_forward`, `read_reverse`,
+One of `mapper.DATA_FORMATS`: `bigwig`, `bed`, `maf`, `vcf`, or one of the BAM
+readouts `read_sum`, `read_max`, `read_min`, `read_forward`, `read_reverse`,
 `normal_max`, `normal_min`, `normal_forward`, `normal_reverse`. An unknown
 value raises `ValueError` immediately. (Before 0.9.0 the type annotation
 advertised `bam_max` and similar, which the dispatch did not accept.)
@@ -42,8 +42,8 @@ a gap from a measured zero.
 `ma_mapper.mapper.normalise(alignment_matrix, data_matrix, method='average', denominator='alignment')`
 
 **denominator : {'alignment', 'measured'}, default: 'alignment'**
-What `average` and `perc_coverage` divide by. `alignment` — the only behaviour
-before 0.9.0 — counts the copies with a base in the column, *including those
+What `average` and `perc_coverage` divide by. `alignment`, the only behaviour
+before 0.9.0, counts the copies with a base in the column, *including those
 whose value is `nan`*, so a track that does not cover part of the family reads
 as a low value rather than as missing. `measured` counts the copies that have a
 finite value there. A column no copy occupies returns `nan` rather than `inf`.
@@ -60,7 +60,7 @@ alignment whose later columns held an N.
 
 **main_chr : list or None, default: None**
 Chromosomes to keep; `None` means `utility.HUMAN_MAIN_CHROMOSOMES`. **Pass this
-for any assembly other than human** — the human list keeps mouse `chr1..chr19`
+for any assembly other than human**. The human list keeps mouse `chr1..chr19`
 by coincidence and silently drops everything else. `[]` keeps every chromosome.
 
 **discard_class : list or None, default: None**

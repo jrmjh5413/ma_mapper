@@ -229,3 +229,27 @@ class TestMafCountArguments:
         """One value per reference base is what map_data requires."""
         out = self._run(three_species_maf, coordinate_table, count_arg="common_freq")
         assert len(out) == 20  # chrT:100-120
+
+
+class TestMafCountArgValidation:
+    def test_an_unimplemented_mode_is_refused(self, three_species_maf, coordinate_table):
+        """'a', 't', 'c', 'g' and 'common' were documented and returned nothing.
+
+        They had no branch in the counting loop, so every window came back as
+        an empty list, which then failed downstream or silently produced an
+        empty matrix.
+        """
+        extract_maf.build_maf_index(three_species_maf, chrom=CHROM)
+        copya = coordinate_table[coordinate_table.iloc[:, 3] == "copyA"]
+        for mode in ("a", "t", "c", "g", "common"):
+            with pytest.raises(ValueError, match="count_arg must be one of"):
+                extract_maf.maf_io(copya, three_species_maf, count_arg=mode)
+
+    def test_every_advertised_mode_returns_one_value_per_base(
+        self, three_species_maf, coordinate_table
+    ):
+        extract_maf.build_maf_index(three_species_maf, chrom=CHROM)
+        copya = coordinate_table[coordinate_table.iloc[:, 3] == "copyA"]
+        for mode in extract_maf.COUNT_ARGS:
+            out = extract_maf.maf_io(copya, three_species_maf, count_arg=mode)[0]
+            assert len(out) == 20, f"{mode} returned {len(out)} values"

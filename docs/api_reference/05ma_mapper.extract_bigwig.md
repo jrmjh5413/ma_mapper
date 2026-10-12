@@ -8,7 +8,7 @@ a pyBigWig wrapper for BIGWIG/WIG file data extraction
 
 `ma_mapper.extract_bigwig.bigwig_io(coordinate_table, bigwig, save_to_file = False, generate_new_id=False)`
 
-Extract data from the input BIGWIG file using the coodinates from the coordinate table. 
+Extract data from the input BIGWIG file using the coordinates from the coordinate table. 
 
 ### Parameters
 **coordinate_table : str,pd.DataFrame, default: None**  

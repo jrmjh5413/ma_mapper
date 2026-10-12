@@ -3,13 +3,13 @@ a pybedtools wrapper for BED file data extraction
 ## list of functions
 - ma_mapper.extract_bed.bed_io()
 - ma_mapper.extract_bed.intersect_process()
-- ma_mapper.coordinate_table_to_bed()
+- ma_mapper.extract_bed.coordinate_table_to_bed()
 
 ## ma_mapper.extract_bed.bed_io()
 
 `ma_mapper.extract_bed.bed_io(coordinate_table, bed, save_to_file = False, generate_new_id=False, strand_overlap=True)`
 
-Extract scores from the input BED file from the overlaps between the coodinates from the coordinate and from the BED file. This is the wrapper for pybedtools package.
+Extract scores from the input BED file from the overlaps between the coordinates from the coordinate and from the BED file. This is the wrapper for pybedtools package.
 
 ### Parameters
 **coordinate_table : str,pd.DataFrame, default: None**  
@@ -48,9 +48,9 @@ The ID of the TE fragment of interest
 **bed_output_array: np.ndarray**  
 The numpy.ndarray of accumulated score from the input BED file that overlaps with the TE of interest.
 
-## ma_mapper.coordinate_table_to_bed()
+## ma_mapper.extract_bed.coordinate_table_to_bed()
 
-`ma_mapper.coordinate_table_to_bed(coordinate_table, save_to_file=False, export_as_bedtool=False)`
+`ma_mapper.extract_bed.coordinate_table_to_bed(coordinate_table, save_to_file=False, export_as_bedtool=False)`
 
 Convert the coordinate table that might not have score column to fit the BED format into a proper BED table
 

@@ -22,7 +22,7 @@
 - [Command line](#command-line)
 - [Parallelism](#parallelism)
 - [Logging](#logging)
-- [Semantics worth checking before publishing a number](#semantics-worth-checking-before-publishing-a-number)
+- [Defaults and semantics](#defaults-and-semantics)
 - [Reproducing results from before 0.9.0](#reproducing-results-from-before-090)
 
 See also the [tutorial](tutorial.md), the
@@ -80,7 +80,7 @@ The output was saved in FASTA format. Users can adjust multithread parameters us
 
 `mafft_align()` uses MAFFT's default algorithm (FFT-NS-2), whose memory grows as
 about `n^1.19`. It is reliable up to a few tens of thousands of copies and fails
-above roughly 65,000 — for the largest human families it would need ~150 GB.
+above roughly 65,000. For the largest human families it would need ~150 GB.
 
 For families above ~50,000 copies, use a profile alignment instead:
 
@@ -100,7 +100,7 @@ clustering (`pdist` + `linkage`) is also O(n^2) and needs 199 GB at 223,029
 copies, so it fails at the same ~65,000-copy threshold. Use an aligner guide
 tree (`famsa -gt nj -medoidtree -gt_export`, ~10 s) above that size.
 
-Overlay outputs are written filtered (~250 columns), so they stay small — but
+Overlay outputs are written filtered (~250 columns), so they stay small, but
 `MAF raw` costs ~5,700 bytes per cell against 4-29 for every other track, which
 projects to ~178 GB for a single large family. Use the aggregated MAF variants
 (`base_count`, `coverage`, `common_freq`, `ref_freq`) instead at that scale.
@@ -355,9 +355,9 @@ rebuilding an old matrix bit-for-bit.
 ## Parallelism
 
 `extract_vcf`, `extract_maf` and the MAF index build are the only parallel
-parts. They use as many worker processes as the process is allowed CPUs —
+parts. They use as many worker processes as the process is allowed CPUs, from
 `os.sched_getaffinity`, which under Slurm is the allocation rather than the
-machine — and respect, in order of precedence:
+machine. In order of precedence:
 
 | variable | applies to |
 |---|---|
@@ -382,16 +382,12 @@ ma_mapper.configure_logging(logfile='run.log')   # or stream=True for stderr onl
 or set `MA_MAPPER_LOG=/path/to/run.log` before importing. On the command line,
 `--verbose` and `--logfile` do the same.
 
-## Semantics worth checking before publishing a number
+## Defaults and semantics
 
-| thing | what it actually does |
-|---|---|
-| `extract_bam(offset=...)` | **defaults to 5**, shifting every read 5 bp downstream |
-| `row_threshold` | non-gap *density within a copy's own span* — correlated with element age, not a length filter |
-| `normalise(denominator='alignment')` | divides by the copies with a base in the column, `nan` values included; `'measured'` divides by the copies with a finite value |
-| `normalise(method='perc_coverage')` | counts non-zero cells, so a genuine 0.0 reads as absent |
-| MAF `count_arg='coverage'` | counts species present in the block, deletions included |
-| `generate_new_id=True` | one copy per row: a fragmented element is *not* reassembled |
+The defaults and definitions that decide what a number means, including the BAM
+offset, what `row_threshold` measures, what `normalise` divides by, and the
+difference between a gap, an unmeasured base and a zero, are collected in
+[semantics.md](semantics.md).
 
 ## Reproducing results from before 0.9.0
 

@@ -9,7 +9,7 @@ a pysam wrapper for BAM/SAM file data extraction
 
 `ma_mapper.extract_bam.bam_io(coordinate_table, bam_file, bam_format,save_to_file=False, generate_new_id=False)`
 
-Extract mapped reads from the input BAM file using the coodinates from the coordinate table. The user can choose between raw read counts and normalized reads. 
+Extract mapped reads from the input BAM file using the coordinates from the coordinate table. The user can choose between raw read counts and normalized reads. 
 
 ### Parameters
 **coordinate_table : str,pd.DataFrame, default: None**  
@@ -38,7 +38,7 @@ The list of extracted data from BAM file
 
 ## ma_mapper.extract_bam.extract_bam()
 
-`ma_mapper.extract_bam.extract_bam(bam_file, chrom ,start_list, end_list, strand, bam_format, offset=5, probe_length=100, smoothing_length=100)`
+`ma_mapper.extract_bam.extract_bam(bam_file, chrom, start_list, end_list, strand, bam_format, offset=5, probe_length=100, smoothing_length=100, drop_dup=False, drop_unmap=False, drop_2=False, drop_multimap=False)`
 
 Extract mapped reads from the input BAM file from the specified genomic location. The user can choose between raw read counts and normalized reads. This is the wrapper for pysam package
 
@@ -67,13 +67,25 @@ output format of BAM data to be extracted.
 - 'read_sum' : sum of both forward and reverse reads
 
 **offset : int, default: 5**  
-The positional offset for read mapping
+The positional offset for read mapping. Note that the default is not zero: every read's 5' end is shifted five bases downstream, which suits a Tn5-style correction. Pass offset=0 for raw 5' ends.
 
 **probe_length: int, default: 100**  
 The region around each mapped read where read counts are distributed
 
 **smoothing_length: int, default: 100**  
 The spread of the Gaussian smoothing kernel applied to the read coverage
+
+**drop_dup : bool, default: False**  
+Skip reads flagged as duplicates.
+
+**drop_unmap : bool, default: False**  
+Skip reads flagged as unmapped.
+
+**drop_2 : bool, default: False**  
+Skip secondary and supplementary alignments.
+
+**drop_multimap : bool, default: False**  
+Skip reads whose NH tag is greater than 1. This only has an effect for aligners that write the NH tag, such as STAR and HISAT2. bwa and bowtie2 do not.
 
 ### Returns
 **np_results: numpy.ndarray**  

@@ -65,7 +65,7 @@ def extract_coord_from_repeatmasker_table(
         if isinstance(save_to_file, str):
             output_filepath = save_to_file  
         else:
-            output_filepath = f'{os.path.dirname(os.path.abspath(__file__))}/{subfamily}.txt'
+            output_filepath = f'{os.getcwd()}/{subfamily}.txt'
         coords.to_csv(output_filepath, sep='\t', index= False, header=False)
     return coords
 #%%
@@ -269,14 +269,14 @@ def parse_alignment_to_fasta(parsed_alignment,name=None, save_to_file=False):
         if isinstance(save_to_file, str):
             output_filepath = save_to_file  
         else:
-            output_filepath = f'{os.path.dirname(os.path.abspath(__file__))}/parsed_to_seq.fasta'
+            output_filepath = f'{os.getcwd()}/parsed_to_seq.fasta'
         with open(output_filepath, "w") as output_handle:
             SeqIO.write(dna_sequences, output_handle, "fasta")
     return dna_sequences
 
 def mafft_align(input_filepath, nthread = None, nthreadtb = None, nthreadit =None, output_filepath = None, mafft_arg = 
                   #--quiet --memsave 
-                  '--treeout --reorder '):
+                  '--treeout --reorder'):
     """Align a FASTA with MAFFT's default algorithm (FFT-NS-2).
 
     Parameters

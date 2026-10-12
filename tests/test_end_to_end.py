@@ -122,6 +122,13 @@ def _cli(*args):
 
 
 class TestCommandLine:
+    """The entry point as a user runs it.
+
+    Each case here starts a fresh interpreter, which costs seconds, so this
+    class keeps only what the in-process tests in test_cli_inprocess.py cannot
+    show: that `python -m ma_mapper.cli` resolves, prints and writes files.
+    """
+
     def test_version(self):
         result = _cli("--version")
         assert result.returncode == 0
@@ -132,10 +139,6 @@ class TestCommandLine:
         for command in ("sequence", "align", "overlay", "plot", "index-maf", "info"):
             assert command in result.stdout
 
-    def test_info_reports_versions(self):
-        result = _cli("info")
-        assert result.returncode == 0
-        assert "numpy" in result.stdout
 
     def test_overlay_writes_a_matrix_and_its_row_names(
         self, alignment_fasta, position_bigwig, tmp_path
@@ -155,37 +158,5 @@ class TestCommandLine:
         rows = pd.read_csv(tmp_path / "matrix.rows.tsv", sep="\t")
         assert set(rows["name"]) == {"copyA", "copyB", "copyC", "copyD"}
 
-    def test_plot_writes_a_png(self, alignment_fasta, position_bigwig, tmp_path):
-        matrix = tmp_path / "matrix.npy"
-        _cli(
-            "overlay", "--alignment", alignment_fasta, "--data", position_bigwig,
-            "--format", "bigwig", "--filter", "none", "--output", str(matrix),
-        )
-        png = tmp_path / "profile.png"
-        result = _cli(
-            "plot", "--matrix", str(matrix), "--alignment", alignment_fasta,
-            "--kind", "profile", "--output", str(png),
-        )
-        assert result.returncode == 0, result.stderr
-        assert png.stat().st_size > 1000
 
-    def test_a_missing_file_exits_cleanly(self, tmp_path):
-        result = _cli(
-            "overlay", "--alignment", str(tmp_path / "nope.fasta"),
-            "--data", str(tmp_path / "nope.bw"), "--format", "bigwig",
-            "--output", str(tmp_path / "out.npy"),
-        )
-        assert result.returncode == 2
-        assert "not found" in result.stderr
-        assert "Traceback" not in result.stderr
 
-    def test_sequence_subcommand(self, coordinate_table, genome_fasta, tmp_path):
-        coordinates = tmp_path / "coords.bed"
-        coordinate_table.to_csv(coordinates, sep="\t", header=False, index=False)
-        out = tmp_path / "seqs.fasta"
-        result = _cli(
-            "sequence", "--coordinates", str(coordinates),
-            "--genome", genome_fasta, "--output", str(out),
-        )
-        assert result.returncode == 0, result.stderr
-        assert out.read_text().count(">") == 4

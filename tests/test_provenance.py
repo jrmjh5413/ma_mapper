@@ -1,8 +1,6 @@
 """The run record written beside every matrix."""
 
 import json
-import subprocess
-import sys
 
 import numpy as np
 
@@ -55,19 +53,17 @@ def test_record_round_trips(tmp_path):
 
 
 def test_overlay_writes_all_four_files(alignment_fasta, position_bigwig, tmp_path):
+    from ma_mapper import cli
+
     out = tmp_path / "matrix.npy"
-    result = subprocess.run(
-        [
-            sys.executable, "-m", "ma_mapper.cli", "overlay",
-            "--alignment", alignment_fasta,
-            "--data", position_bigwig,
-            "--format", "bigwig",
-            "--filter", "none",
-            "--output", str(out),
-        ],
-        capture_output=True, text=True,
-    )
-    assert result.returncode == 0, result.stderr
+    assert cli.main([
+        "overlay",
+        "--alignment", alignment_fasta,
+        "--data", position_bigwig,
+        "--format", "bigwig",
+        "--filter", "none",
+        "--output", str(out),
+    ]) == 0
     record = json.loads((tmp_path / "matrix.run.json").read_text())
     assert record["parameters"]["data_format"] == "bigwig"
     assert record["inputs"]["alignment"]["sha256"]

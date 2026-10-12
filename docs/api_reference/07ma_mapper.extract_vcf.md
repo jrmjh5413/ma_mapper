@@ -8,7 +8,7 @@ a cyvcf2 wrapper for VCF file data extraction
 
 `ma_mapper.extract_vcf.vcf_io(coordinate_table, vcf, query_key = 'AF', vcf_format = 'gnomad', save_to_file = False, generate_new_id = False)`
 
-Extract data from the input VCF file using the coodinates from the coordinate table. As of now, the module supports gnomAD dataset.
+Extract data from the input VCF file using the coordinates from the coordinate table. As of now, the module supports gnomAD dataset.
 
 ### Parameters
 **coordinate_table : str,pd.DataFrame, default: None**  

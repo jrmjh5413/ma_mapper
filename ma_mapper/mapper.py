@@ -52,7 +52,7 @@ def extract_coordinate_from_alignment(alignment_file, save_to_file = None):
             output_filepath = save_to_file
         else:
             import os
-            output_filepath =f'{os.path.dirname(os.path.abspath(__file__))}/alignment_coordinate.txt'
+            output_filepath =f'{os.getcwd()}/alignment_coordinate.txt'
         coordinate_table.to_csv(output_filepath, sep='\t', index= False)
         logger.info('save new coordinate table at', output_filepath)
     else:
@@ -159,7 +159,7 @@ def parse_alignment(alignment_file:str,
             if isinstance(alignment_file, str):
                 output_file = f'{alignment_file}.parsed'
             else:
-                output_file = f'{os.path.dirname(os.path.abspath(__file__))}/alignment.parsed'
+                output_file = f'{os.getcwd()}/alignment.parsed'
 
         import h5py
         with h5py.File(output_file, 'w') as hf:
@@ -287,7 +287,7 @@ def create_filter(parsed_alignment, col_threshold = 0.50, col_content_threshold 
         if isinstance(save_to_file, str) == True:
             output_file = save_to_file 
         else:
-            output_file = f'{os.path.dirname(os.path.abspath(__file__))}/alignment.filter'
+            output_file = f'{os.getcwd()}/alignment.filter'
         pickle.dump(filters, open(output_file, "wb" ))
     else:
         return filters
@@ -342,7 +342,7 @@ def iterative_filter(parsed_alignment_np, col_threshold=0.5, row_threshold=0.5, 
         if isinstance(save_to_file, str) == True:
             output_file = save_to_file 
         else:
-            output_file = f'{os.path.dirname(os.path.abspath(__file__))}/alignment.filter'
+            output_file = f'{os.getcwd()}/alignment.filter'
         pickle.dump(filters, open(output_file, "wb" ))
     else:
         return filters

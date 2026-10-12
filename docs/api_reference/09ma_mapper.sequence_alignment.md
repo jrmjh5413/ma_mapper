@@ -1,17 +1,17 @@
 # ma_mapper.sequence_alignment
-a wrapper for MAFFT, for seqeunce extraction and multiple alignment 
+a wrapper for MAFFT, for sequence extraction and multiple alignment 
 ## list of functions
-- ma_mapper.sequence_alignment.seqeunce_io()
+- ma_mapper.sequence_alignment.sequence_io()
 - ma_mapper.sequence_alignment.mafft_align()
 - ma_mapper.sequence_alignment.extract_coord_from_repeatmasker_table()
 - ma_mapper.sequence_alignment.extract_sequence()
 - ma_mapper.sequence_alignment.parse_array_to_sequence()
 
-## ma_mapper.sequence_alignment.seqeunce_io()
+## ma_mapper.sequence_alignment.sequence_io()
 
-`ma_mapper.sequence_alignment.seqeunce_io(coordinate_table,source_fasta, save_to_file=False, generate_new_id = False)`
+`ma_mapper.sequence_alignment.sequence_io(coordinate_table,source_fasta, save_to_file=False, generate_new_id = False)`
 
-Extract DNA seqeunces from the genome sequence using the coordinates from the coordinate table. This is the wrapper for Bio.SeqIO
+Extract DNA sequences from the genome sequence using the coordinates from the coordinate table. This is the wrapper for Bio.SeqIO
 
 ### Parameters
 **coordinate_table : str,pd.DataFrame, default: None**  
@@ -109,7 +109,7 @@ Convert the alignment matrix (parsed alignment) from ma_mapper.mapper into the l
 The parsed alignment matrix from ma_mapper.mapper
 
 **name : str, default: None**  
-The name of DNA seqeunces, it will be attached by running numbers
+The name of DNA sequences, it will be attached by running numbers
 
 **save_to_file : bool,str, default: False**  
 Save the output sequence as a FASTA file. The filepath can be specified, using save_to_file = True would save the list to the same directory as the coordinate table or current working directory.

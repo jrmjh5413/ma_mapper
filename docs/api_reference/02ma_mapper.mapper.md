@@ -15,7 +15,9 @@ This module contains functions related to alignment parsing and data mapping.
 
 ## ma_mapper.mapper.map_and_overlay()
 
-`ma_mapper.mapper.map_and_overlay(alignment, data_file, data_format, filter=True,coordinate_file=None, extension_length=None, source_fasta=None, **kwargs)`
+`ma_mapper.mapper.map_and_overlay(alignment, data_file, data_format, filter=True, coordinate_file=None, extension_length=None, source_fasta=None, filter_mode='one_pass', return_details=False, **kwargs)`
+
+*`filter_mode` and `return_details` were added in 0.9.0 and are described in [new in 0.9.0](10new_in_0.9.0.md).*
 
 the main API of ma_mapper package, streamline genome wide data extraction and mapping/overlaying on TE multiple alignment
 
@@ -59,7 +61,7 @@ The matrix of extracted genome-wide data with the same gap structure as TE multi
 
 ## ma_mapper.mapper.parse_and_filter()
 
-`ma_mapper.mapper.parse_and_filter(alignment_file, filter=True, extension_length=None, preprocess_out=False,**kwargs)`
+`ma_mapper.mapper.parse_and_filter(alignment_file, filter='one_pass', extension_length=None, preprocess_out=False, **kwargs)`
 
 The wrapper for both parse_alignment() and create_filter(), parse alignment from FASTA format into a numerical matrix and extract coordinate table from alignment headers, then create filter from using alignment content, with additional function to apply filters on the matrix. 
 
@@ -68,11 +70,11 @@ The wrapper for both parse_alignment() and create_filter(), parse alignment from
 **alignment_file : str**  
 The path to the alignment FASTA file
 
-**filter : bool,list[numpy.ndarray, numpy.ndarray], default: True**  
-create filters from parsed alignment content and apply the filter on the matrix. 
+**filter : {'one_pass', 'iterative', None}, default: 'one_pass'**  
+Which filter to create from the parsed alignment content and apply to the matrix. 'one_pass' applies columns, then rows, then columns again. 'iterative' repeats until the masks stop changing. None keeps every row and column. Any other value raises ValueError.
 
 **extension_length : int, default: None**  
-The extension length for seqeunce extraction, in case when observation beyond alignment is needed. the extracted sequence will be attached to both side of the alignment without filtering 
+The extension length for sequence extraction, in case observation beyond the alignment is needed. The extracted sequence is attached to both sides of the alignment without filtering 
 
 **preprocess_out : bool, default: False**  
 export alignment and coordinate table before filtering, as well as the filters instead of the filtered ones
@@ -90,7 +92,7 @@ The list of row and column filers. Both are boolean numpy.1Darray to indicate ro
 
 ## ma_mapper.mapper.map_data()
 
-`ma_mapper.mapper.map_data(extracted_data, alignment_matrix, filter=True, nested_data=None,**kwargs)`
+`ma_mapper.mapper.map_data(extracted_data, alignment_matrix, filter=True, **kwargs)`
 
 map/overlay extracted data onto the numerical alignment matrix by creating a blank container matrix then transferring extracted data from a list into the container using alignment matrix as a reference for gap positions
 
@@ -103,7 +105,9 @@ extracted data output from extraction modules in ma_mapper, could also be the fi
 The numerical matrix converted from multiple alignment in FASTA format
 
 **filter : bool,list[numpy.ndarray, numpy.ndarray], default: True**  
-create filters from parsed alignment content and apply the filter on the matrix.
+create filters from parsed alignment content and apply the filter on the matrix. True builds the masks with create_filter(), and any extra keyword arguments go to it. A list is used directly as [row_filter, col_filter]. False or None returns the unfiltered matrix.
+
+Whether the container is a float matrix or an object matrix is decided from the payload: dictionaries of base counts, as returned by the MAF count modes 'base_count' and 'base_freq', get an object container, and numbers get float32. There is no parameter for this.
 
 ### Returns:
 **mapped_data_matrix: numpy.ndarray**  
@@ -113,7 +117,7 @@ biopython.SeqIOSeqRecord of multiple alignement from biopython.SeqIO.parse()
 
 ## ma_mapper.mapper.extract_coordinate_from_alignment()
 
-`ma_mapper.mapper.extract_coordinate_from_alignment(alignment_file, save_to_file = False)`
+`ma_mapper.mapper.extract_coordinate_from_alignment(alignment_file, save_to_file=None)`
 
 Extract TE coordinates from headers of multiple aingnment FASTA. The headers must be generated with the following format: 
 
@@ -130,7 +134,7 @@ Save the output table as a .csv file. The file path can be specified, using save
 ### Returns
 
 **coordinate_table: pandas.DataFrame**  
-The table in BED file format containing coordinates of seqeunces in the multiple alignment.
+The table in BED file format containing coordinates of sequences in the multiple alignment.
 
 ## ma_mapper.mapper.parse_alignment()
 
@@ -152,9 +156,11 @@ The numerical matrix of the multiple alignment. Ready for visualization by matpl
 
 ## ma_mapper.mapper.create_filter()
 
-`ma_mapper.mapper.create_filter(parsed_alignment, col_threshold = 0.50, col_content_threshold = 0.10, row_threshold = 0.50, save_to_file=False)`
+`ma_mapper.mapper.create_filter(parsed_alignment, col_threshold=0.50, col_content_threshold=0.10, row_threshold=0.50, save_to_file=False, legacy_second_pass=False)`
 
-Create column and row filter for numerical alignment, mainly for visualization as it is common for multiple alignment to have brigde structure where a seqeunce has a long line of unaligned portion that separated aligned blocks from each other. 
+*`legacy_second_pass` was added in 0.9.0, and the second column pass itself was corrected. See [new in 0.9.0](10new_in_0.9.0.md).*
+
+Create column and row filter for numerical alignment, mainly for visualization as it is common for multiple alignment to have brigde structure where a sequence has a long line of unaligned portion that separated aligned blocks from each other. 
 
 The function basically counts numbers of rows or columns against their total numbers.
 
@@ -181,7 +187,9 @@ The list of numpy.1Darray of row filter and column filter for the numerical matr
 
 ## ma_mapper.mapper.normalise()
 
-`ma_mapper.mapper.normalise(alignment_matrix, data_matrix, method = 'average')`
+`ma_mapper.mapper.normalise(alignment_matrix, data_matrix, method='average', denominator='alignment')`
+
+*`denominator` was added in 0.9.0. See [new in 0.9.0](10new_in_0.9.0.md).*
 
 Normalize columns in multiple alignment with values adjusted to gaps in multiple aignment using numpy functions
 

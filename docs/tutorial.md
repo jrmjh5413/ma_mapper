@@ -16,10 +16,10 @@ genome, a RepeatMasker table and a signal track.
 python examples/toy_end_to_end.py /tmp/ma_mapper_tutorial
 ```
 
-That script writes a 400 bp chromosome, puts four copies of a short element on
-it — one on the minus strand, one split into two fragments — and builds a
-bigWig whose value at position *p* is *p*. Then it runs the whole chain and
-checks the result against arithmetic:
+That script writes a 400 bp chromosome and puts four copies of a short element
+on it. One copy is on the minus strand and one is split into two fragments. It
+then builds a bigWig whose value at position *p* is *p*, runs the whole chain,
+and checks the result against arithmetic:
 
 ```
 fetched 4 copies, lengths [20, 20, 20, 15]
@@ -27,13 +27,13 @@ overlay matrix (4, 20), 75 non-gap cells
 every value in the column of its own base: True
 ```
 
-That last line is the point. Because the track's value at each position is the
-position itself, a copy's row can be read directly: `copyB` is on the minus
-strand at chrT:200-220, so its row must read 219, 218, … 200. If the
-orientation, the fragment order or the offset were wrong, the check would fail
-rather than produce a plausible-looking figure.
+The last line is the check that matters. The track's value at each position is
+the position itself, so a copy's row can be read directly: `copyB` is on the
+minus strand at chrT:200-220, so its row must read 219, 218, ... 200. A wrong
+orientation, fragment order or offset fails the check instead of producing a
+plausible-looking figure.
 
-Read the script — it is 120 lines and it is the whole API.
+The script is 120 lines long and uses the whole API.
 
 ## 2. A real family
 
@@ -62,10 +62,10 @@ ma-mapper plot --matrix THE1C_phyloP.npy --kind profile \
 ```
 
 Note `--row-threshold 0.10` rather than the default 0.50. The row threshold is
-a *density* — the share of non-gap bases within a copy's own span — so at 0.50
-an old, deletion-riddled family loses most of its copies, and the ones it keeps
-are the unusually intact ones. That is a selection on exactly the covariate
-most TE analyses condition on. For a young, compact family the default is fine.
+a density, not a length, and at 0.50 an old family loses most of its copies.
+For a young, compact family the default is fine.
+[semantics.md](semantics.md#row_threshold-is-a-density-not-a-length) has the
+measured numbers.
 
 Step 3 writes four files:
 
@@ -91,13 +91,14 @@ alignment > 0                     # True where that copy has a base
 np.isnan(matrix).sum()            # bigWig returns nan where it has no data
 ```
 
-Three distinctions that matter, and which the matrix keeps separate:
+Three distinctions that matter, and which the matrix keeps separate (see
+[semantics.md](semantics.md) for the rest):
 
-- **gap** — the copy has no base in this column: `alignment == 0`, and the
-  overlay cell is 0;
-- **not measured** — the copy has a base but the track does not cover it:
-  `nan` (bigWig) or 0 (BED, where absence genuinely means no feature);
-- **measured as zero** — a real 0.0.
+- **gap**: the copy has no base in this column. `alignment == 0`, and the
+  overlay cell is 0.
+- **not measured**: the copy has a base but the track does not cover it.
+  `nan` for a bigWig, 0 for a BED, where absence means no feature.
+- **measured as zero**: a real 0.0.
 
 Collapsing a column therefore needs a decision about the second case:
 
@@ -135,18 +136,18 @@ print(f'largest difference at column {int(np.nanargmax(np.abs(difference)))}')
 ```
 
 A column index is not a consensus position. If you need to speak about the
-consensus, map it explicitly — do not assume the two frames agree, because for
-fragmented or offset copies they do not.
+consensus, map it explicitly. The two frames do not agree for fragmented or
+offset copies.
 
 ## 5. When the numbers look wrong
 
 | symptom | likely cause |
 |---|---|
 | `copy N has X non-gap bases in the alignment but Y extracted values` | the alignment and the coordinate table were built from different copy sets, or the aligner trimmed columns (`hmmalign --trim`) or wrote `.` for gaps without translating them to `-` |
-| every value is 0 | for BED, no feature overlaps these copies; for a bigWig, check the chromosome naming (`chr1` against `1`) — an unknown name raises rather than returning zeros |
+| every value is 0 | for BED, no feature overlaps these copies; for a bigWig, check the chromosome naming (`chr1` against `1`). An unknown name raises rather than returning zeros |
 | the whole matrix is gaps | the alignment was passed as an exhausted iterator (fixed in 0.9.0, but check the version with `ma-mapper info`) |
 | a profile looks flat where a footprint is expected | the row filter may have removed the copies that carry it: compare `rows.tsv` against the family size |
-| read counts stop at 255 | an overlay built before 0.9.0 — the profile was `uint8` and wrapped |
+| read counts stop at 255 | an overlay built before 0.9.0, when the profile was `uint8` and wrapped |
 | memory blows up | the overlay canvas is copies × columns × 4 bytes; a 100,000-copy family with 20,000 columns is 8 GB. Filter columns first, or work in blocks |
 
 Two checks worth running before building on a new dataset:

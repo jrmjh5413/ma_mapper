@@ -9,7 +9,7 @@ Ready to submit; two placeholders have to be filled at release time.
    openssl sha256 dist/ma_mapper-<version>.tar.gz
    ```
 
-2. Publish to PyPI first — Bioconda builds from the PyPI sdist, not from git.
+2. Publish to PyPI first. Bioconda builds from the PyPI sdist, not from git.
 
 3. Put the checksum in `meta.yaml` (`sha256:`), set `version:`, and leave
    `build: number: 0` for a new version.
@@ -18,7 +18,7 @@ Ready to submit; two placeholders have to be filled at release time.
    `recipes/ma-mapper/meta.yaml`, and open a pull request. Their CI builds and
    tests it; the `test:` block above is what it runs.
 
-`noarch: python` is correct here — the package itself is pure Python. The
+`noarch: python` is correct here, because the package itself is pure Python. The
 compiled dependencies (pysam, cyvcf2, pyBigWig) carry their own builds, and
 `bedtools` is the binary `pybedtools` shells out to, which is the main reason
 to offer a conda package at all.

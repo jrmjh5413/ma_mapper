@@ -7,9 +7,9 @@ a Bio.AlignIO.MafIO wrapper for MAF file data extraction
 
 ## ma_mapper.extract_maf.maf_io()
 
-`ma_mapper.extract_maf.maf_io(coordinate_table, maf, separated_maf=False, target_species='Homo_sepiens, count_arg='common',save_to_file=False, generate_new_id=False, species_list=None, e_value_table=None, internal_id_table=None)`
+`ma_mapper.extract_maf.maf_io(coordinate_table, maf, separated_maf=False, target_species='Homo_sapiens', count_arg='common_freq', save_to_file=False, generate_new_id=False, species_list=None, e_value_table=None, internal_id_table=None)`
 
-Extract data from the input MAF file using the coodinates from the coordinate table. Noted that MAF file is actually multiple alingment file formats, the output of this package is expressed as base counts or frequencies.
+Extract data from the input MAF file using the coordinates from the coordinate table. Note that MAF file is actually multiple alignment file formats, the output of this package is expressed as base counts or frequencies.
 
 ### Parameters
 **coordinate_table : str,pd.DataFrame, default: None**  
@@ -22,16 +22,16 @@ The path to the MAF file or the directory of MAF files
 Specify the type of MAF input. For some datasets, alignments are contained in a single MAF file, however, for a big dataset such as Zoonomia, separating alignment by chromosomes can improve speed.
 
 **target_species : str, default: 'Homo_sapiens'**  
-The species id used as a reference seqeunce for the alignment.
+The species id used as a reference sequence for the alignment.
 
-**count_arg : str, default: 'common'**  
+**count_arg : str, default: 'common_freq'**  
 The mode of base counting assigned to extract_maf().
 
 - 'ref_freq': count reference base frequencies
-- 'coverage': count total bases
-- 'common_raw','common_freq','common_freq_nogap': count common base (raw count, freqeuncies, and frequencies without gaps)
-- 'a','t','c','g': count ATCG
-- 'base_count','base_freq','base_freq_nogap': count all bases (raw count, freqeuncies, and frequencies without gaps)
+- 'coverage': count total bases. This counts the species present in the
+  alignment block, including those whose base at that column is a deletion
+- 'common_raw','common_freq','common_freq_nogap': count common base (raw count, frequencies, and frequencies without gaps)
+- 'base_count','base_freq','base_freq_nogap': count all bases (raw count, frequencies, and frequencies without gaps)
 - 'raw': extract bases without counting 
 
 **save_to_file : bool,str, default: False**  
@@ -55,7 +55,7 @@ The list of extracted data from MAF file
 
 ## ma_mapper.extract_maf.extract_maf()
 
-`ma_mapper.extract_maf.extract_maf(name, maf_file, chrom, start, end, strand, target_species='Homo_sapiens', count_arg='common', species_list=None, e_value_df=None, internal_id_df=None)`
+`ma_mapper.extract_maf.extract_maf(name, maf_file, chrom, start, end, strand, target_species='Homo_sapiens', count_arg='common_freq', species_list=None, e_value_df=None, internal_id_df=None)`
 
 Extract data from the input MAF file from the specific genomic location. This is the wrapper for Bio.AlignIO.MafIO.
 
@@ -79,16 +79,16 @@ The list of end locations of TE fragments on the chromosome
 The DNA strand of TE fragments, must be either '+' or '-'
 
 **target_species : str, default: 'Homo_sapiens'**  
-The species id used as a reference seqeunce for the alignment.
+The species id used as a reference sequence for the alignment.
 
-**count_arg : str, default: 'common'**  
+**count_arg : str, default: 'common_freq'**  
 The mode of base counting assigned to extract_maf().
 
 - 'ref_freq': count reference base frequencies
-- 'coverage': count total bases
-- 'common_raw','common_freq','common_freq_nogap': count common base (raw count, freqeuncies, and frequencies without gaps)
-- 'a','t','c','g': count ATCG
-'base_count','base_freq','base_freq_nogap': count all bases (raw count, freqeuncies, and frequencies without gaps)
+- 'coverage': count total bases. This counts the species present in the
+  alignment block, including those whose base at that column is a deletion
+- 'common_raw','common_freq','common_freq_nogap': count common base (raw count, frequencies, and frequencies without gaps)
+'base_count','base_freq','base_freq_nogap': count all bases (raw count, frequencies, and frequencies without gaps)
 - 'raw': extract bases without counting 
 
 **species_list : list[str], default: None**  

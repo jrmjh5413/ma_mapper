@@ -139,7 +139,7 @@ def get_spliced_mod(self, starts, ends, strand=1):
                     effective_end = min(exonend, rec_start + len(gapped_seq))
            
                     if effective_start >= effective_end:
-                        # Exon lies completely outside this block — skip
+                        # Exon lies completely outside this block, skip it
                         continue
 
                     start_idx = effective_start - rec_start
@@ -291,7 +291,15 @@ def get_spliced_mod(self, starts, ends, strand=1):
 MafIO.MafIndex.get_spliced = get_spliced_mod
 #%%
 _AGEARG = Literal[None,'calibrate']
-_COUNTARG = Literal['ref_freq','coverage','common_freq', 'common_raw','common_freq_nogap','a','t','c','g','base_count','base_freq','base_freq_nogap','raw']
+# 'a', 't', 'c' and 'g' were listed here, and in the API reference, but have no
+# branch in the counting loop below, so they returned an empty list for every
+# window. The default the reference documented, 'common', had the same problem.
+# COUNT_ARGS is the implemented set and anything else now raises.
+COUNT_ARGS = (
+    'ref_freq', 'coverage', 'common_freq', 'common_raw', 'common_freq_nogap',
+    'base_count', 'base_freq', 'base_freq_nogap', 'raw', 'raw_genome',
+)
+_COUNTARG = Literal['ref_freq','coverage','common_freq','common_raw','common_freq_nogap','base_count','base_freq','base_freq_nogap','raw','raw_genome']
 def extract_maf(name:str,
                 maf_file:str, 
                 chrom:str, 
@@ -304,6 +312,8 @@ def extract_maf(name:str,
                 e_value_df:pd.DataFrame = None, 
                 internal_id_df:pd.DataFrame = None,
                 ):
+    if count_arg not in COUNT_ARGS:
+        raise ValueError(f"count_arg must be one of {COUNT_ARGS}, got {count_arg!r}")
     iupac_codes = {
         'A': {'A'},
         'C': {'C'},
@@ -564,6 +574,8 @@ def maf_io(coordinate_table: pd.DataFrame|str,
     ``NameError`` in the worker, and an ``e_value_table`` arrived as
     ``species_list`` and was turned into a regex of its own column names.
     """
+    if count_arg not in COUNT_ARGS:
+        raise ValueError(f"count_arg must be one of {COUNT_ARGS}, got {count_arg!r}")
     coordinate_local = read_coordinate_table(coordinate_table)
     meta_id, chrom_list, start_list, end_list, strand_list = group_coordinates(
         coordinate_local, generate_new_id=generate_new_id

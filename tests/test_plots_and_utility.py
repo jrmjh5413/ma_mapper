@@ -1,9 +1,9 @@
 """Figures land where they were asked to, and the table helpers filter what they say.
 
-The save paths are the part of `plots` that changed in 0.9.0 — three functions
-raised `NameError` when asked to save, the rest wrote into the installed
-package directory, and `plot_heatmap` ignored a path entirely — so they are
-what these tests pin down. They do not check what the figures look like.
+The save paths are the part of `plots` that changed in 0.9.0, so they are what
+these tests pin down. Three functions raised `NameError` when asked to save,
+the rest wrote into the installed package directory, and `plot_heatmap` ignored
+a path entirely. These tests do not check what the figures look like.
 """
 
 import matplotlib

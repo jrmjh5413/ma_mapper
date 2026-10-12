@@ -55,10 +55,11 @@ Anything built with an earlier version should be checked against this list.
   any family containing one died with `IndexError: Boolean index has wrong
   length`. Both FASTA conventions are now handled: one record per copy (names
   unique, fragments in the header) and one record per fragment.
-- `map_and_overlay(coordinate_file=...)` built the row permutation backwards —
-  the position of each alignment row in the coordinate table, used directly as
-  an index, which is the inverse permutation. It is correct for an identity or
-  a single swap and pairs the wrong copy with the wrong data for anything else.
+- `map_and_overlay(coordinate_file=...)` built the row permutation backwards.
+  It used the position of each alignment row in the coordinate table directly
+  as an index, which is the inverse of the permutation needed. That is correct
+  for an identity or a single swap, and pairs the wrong copy with the wrong
+  data for anything else.
 - `map_and_overlay` tested `os.path.isfile(coordinate_table)` before that name
   existed, so passing a `coordinate_file` path raised `NameError`.
 - `map_and_overlay`'s type annotation advertised formats (`bam_max`, ...) that
@@ -66,8 +67,9 @@ Anything built with an earlier version should be checked against this list.
   unspecified" and then failed with `UnboundLocalError`. The accepted values
   are in `mapper.DATA_FORMATS` and an unknown one raises immediately.
 - `map_data` checks that each copy's value count matches its non-gap base count
-  and says which copy disagrees, instead of raising a bare numpy broadcast
-  error — or, when the counts happen to match, silently mis-assigning rows.
+  and says which copy disagrees. Before, a mismatch raised a bare numpy
+  broadcast error, and counts that happened to match mis-assigned rows
+  silently.
 - `maf_io` passed five fixed arguments positionally in an order that did not
   match `extract_maf`'s signature: `species_list`, `e_value_df` and
   `internal_id_df` were rotated. A `species_list` arrived as `internal_id_df`
@@ -114,7 +116,7 @@ Anything built with an earlier version should be checked against this list.
   honoured.
 - Every `*_io` function compared `save_to_file == True`, which is `False` for a
   string: asking to save to a path wrote nothing and reported nothing. The
-  reported path is also the path actually written — `compress_pickle` replaces
+  reported path is also the path actually written. `compress_pickle` replaces
   the extension with the compression's own, so `vcf_out.p` was really
   `vcf_out.lzma`. Default names now end in `.lzma`.
 - A missing coordinate table was logged and then crashed with `NameError`
@@ -143,13 +145,13 @@ Anything built with an earlier version should be checked against this list.
   `MA_MAPPER_WORKERS`, `MA_MAPPER_VCF_WORKERS` and `MA_MAPPER_MAF_WORKERS`.
 - `normalise` takes `denominator='alignment'|'measured'`. The default is the
   old behaviour, which divides by the number of copies with a base in the
-  column **including those whose value is `nan`** — so a track that does not
+  column **including those whose value is `nan`**, so a track that does not
   cover part of the family reads as a low value rather than as missing.
   `'measured'` divides by the copies that have a finite value. A column no copy
   occupies yields `nan` rather than `inf`.
 - `map_and_overlay` takes `filter_mode` (the iterative filter was unreachable
   through it) and `return_details`, which also returns the surviving copies'
-  coordinates and the filtered alignment — without them a matrix has no row
+  coordinates and the filtered alignment. Without them a matrix has no row
   labels.
 - `utility.repeatmasker_prep` takes `main_chr` and `discard_class`. The default
   chromosome list is human, which silently dropped everything in any other
@@ -165,8 +167,8 @@ Anything built with an earlier version should be checked against this list.
   `sequence_io` no longer rescans the whole coordinate table once per copy
   (quadratic in the number of copies).
 - `sequence_io` reads the genome through its `.fai` index (pysam) instead of
-  loading the whole FASTA into memory with `SeqIO.to_dict` — several gigabytes
-  for hg38, to fetch a few hundred bases. Its `save_to_file=True` path built the
+  loading the whole FASTA into memory with `SeqIO.to_dict`, which costs several
+  gigabytes for hg38 to fetch a few hundred bases. Its `save_to_file=True` path built the
   output name by appending `.fasta` to the coordinate table's *parent
   directory*.
 - `map_data`'s decision between a numeric and an object canvas inspects one
@@ -224,8 +226,8 @@ Anything built with an earlier version should be checked against this list.
   sdist checksum at release time. It brings in `bedtools`, which is not a Python
   dependency but is what `pybedtools` shells out to.
 - **`MANIFEST.in`**, so the source distribution carries the documentation, the
-  examples and the tests — which is what the journal means by test data and
-  documentation being available.
+  examples and the tests, which is what the journal asks for under test data
+  and documentation.
 - A CI job that builds both distributions, checks them with `twine`, installs
   the wheel into an empty environment and runs the shipped example, so the
   claim that the package installs and works is checked on every push.
@@ -238,7 +240,48 @@ Pakkanan Chansongkrow's six tutorial notebooks and nine-page API reference were
 in `script/documentation/`, marked "under construction" and excluded from the
 build. They are now `docs/tutorials/` and `docs/api_reference/`, they ship, and
 they are linked from the README. Each carries a dated status note: the
-parameters they document are still accurate — in two places the code was fixed
-to match them, `save_to_file` above being one — and the notebooks' absolute
+parameters they document are still accurate, and in two places the code was
+fixed to match them, `save_to_file` above being one. The notebooks' absolute
 paths need substituting. `docs/api_reference/10new_in_0.9.0.md` documents every
 parameter added since.
+
+### Documentation, 2026-10-12
+
+- **Style.** Every document in the repository was rewritten to the register of
+  the inherited API reference: no em dashes (there were 109, against 0 on
+  Pakkanan's pages), no rhetorical headings, declarative sentences. Checked
+  mechanically across every `.md`, `.py`, `.toml`, `.yaml` and `.cff` file.
+- **The API reference is now verified by the test suite.**
+  `tests/test_docs_match_code.py` parses every signature in
+  `docs/api_reference/` and compares it with the code, so a parameter cannot be
+  added, removed or given a new default without a test failing. That check
+  found and this revision fixed: `map_and_overlay` and `create_filter` and
+  `normalise` missing their new parameters, a documented
+  `map_data(nested_data=...)` that does not exist, four BAM filtering
+  parameters never documented at all, `parse_and_filter(filter=True)` where the
+  code takes a mode name, and two names that could not be imported
+  (`seqeunce_io`, `ma_mapper.coordinate_table_to_bed`). Plus 16 spelling
+  corrections.
+- **`count_arg` is validated.** The reference advertised `'a'`, `'t'`, `'c'`,
+  `'g'` and a default of `'common'`, and all five returned an empty list for
+  every window, because none has a branch in the counting loop. They are gone
+  from the type annotation and from the documentation, `COUNT_ARGS` is the
+  implemented set, and anything else raises at both entry points.
+- **Six more default output paths** pointed at the installed package directory,
+  which is read-only in a normal install: `extract_coordinate_from_alignment`,
+  `parse_alignment`, `create_filter`, `iterative_filter`,
+  `extract_coord_from_repeatmasker_table` and `parse_alignment_to_fasta`. They
+  now default to the current directory, which is what the API reference always
+  said they did. A test keeps it that way.
+- **One page for the defaults that change what a number means**
+  (`docs/semantics.md`): the BAM offset of 5, what `row_threshold` measures,
+  what `normalise` divides by, `perc_coverage` treating a real zero as absent,
+  MAF `coverage` counting deletions, and the difference between a gap, an
+  unmeasured base and a zero. The README, the package documentation and the
+  tutorial link to it instead of carrying their own copies, which had already
+  started to diverge.
+- The test suite dropped from 55 s to 16 s. Four command-line cases were
+  running in subprocesses that each re-imported matplotlib and pysam, and are
+  covered in process; one subprocess case remains, to prove the entry point
+  resolves.
+- `mafft_align`'s default `mafft_arg` lost a trailing space.

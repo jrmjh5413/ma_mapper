@@ -1,12 +1,23 @@
 # API references
 
-> **Status note (0.9.0, 2026-10-12).** These pages were written for 0.8.x. Every
-> parameter they describe still exists and still means what they say — in two
-> places the code has been *fixed to match this documentation*, notably
-> `save_to_file`, which is described here as accepting a path and until 0.9.0
-> silently ignored one. What is new in 0.9.0 is listed in
-> [new in 0.9.0](10new_in_0.9.0.md); what changed in behaviour is in
-> [../../CHANGELOG.md](../../CHANGELOG.md) and
+> **Verified against 0.9.0 on 2026-10-12.** Pages 02 to 09 were written for
+> 0.8.x. Every signature on them is now compared with the code by
+> `tests/test_docs_match_code.py`, so a parameter cannot be added, removed or
+> given a new default without a test failing. That check found, and this
+> revision fixes: two functions that had gained parameters, one documented
+> parameter that does not exist (`map_data(nested_data=...)`), four BAM
+> filtering parameters that were never documented, a counting mode list that
+> advertised four modes and a default returning no data, and two function
+> names that could not be imported (`seqeunce_io`,
+> `ma_mapper.coordinate_table_to_bed`).
+>
+> In two places the code was changed to match what these pages already said,
+> rather than the other way round: `save_to_file` accepting a path, which until
+> 0.9.0 was silently ignored, and the default output directory, which was the
+> installed package directory and is now the current one.
+>
+> Parameters added since 0.8.x are in [new in 0.9.0](10new_in_0.9.0.md).
+> Behaviour that changed is in [../../CHANGELOG.md](../../CHANGELOG.md) and
 > [../CHANGES_FROM_UPSTREAM.md](../CHANGES_FROM_UPSTREAM.md).
 
 ## Overview

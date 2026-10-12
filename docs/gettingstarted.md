@@ -6,8 +6,9 @@
 - [Package structure](#package-structure)
 - [Package documentations](#package-documentation)
 ## Tutorials and API reference
-- [Tutorial](/docs/tutorial.md) — runs as written
-- [Notebook tutorials](/docs/tutorials/00overview.md) — six notebooks from 0.8.x
+- [Tutorial](/docs/tutorial.md): runs as written
+- [Defaults and semantics](/docs/semantics.md)
+- [Notebook tutorials](/docs/tutorials/00overview.md): six notebooks from 0.8.x
 - [API reference](/docs/api_reference/01overview.md), and
   [what 0.9.0 added](/docs/api_reference/10new_in_0.9.0.md)
 
