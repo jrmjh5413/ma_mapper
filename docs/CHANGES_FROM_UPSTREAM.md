@@ -23,15 +23,16 @@ packaging and the tests below.
 
 Both branches share history up to **`8f7d870`** (2025-07-21, "remove history
 folder"), which is still the tip of the original's `main`. Nothing from
-upstream is missing from this fork. Three commits sit on top of it:
+upstream is missing from this fork. Four commits sit on top of it:
 
 | commit | date | what it is |
 |---|---|---|
 | `761c3b1` | 2026-06-04 | MAF extraction: species-level deduplication and three smaller fixes |
-| `38e603b` | 2026-10-11 | the VCF strand fix, the mapper gap/dtype fixes, the large-family alignment guide |
-| `5c699e0` | 2026-10-11 | the audit: the remaining fixes, a command line, 105 tests, CI, packaging |
+| `ccffdd0` | 2026-10-11 | the VCF strand fix, the mapper gap/dtype fixes, the large-family alignment guide |
+| `720cd77` | 2026-10-11 | the audit: the remaining fixes, a command line, 105 tests, CI, packaging |
+| `059ad0d` | 2026-10-12 | this document |
 
-In total, against `8f7d870`: **43 files, +5,508 / −1,741 lines**. Per module:
+In total, against `8f7d870`: **44 files, +5,850 / −1,741 lines**. Per module:
 
 | module | upstream lines | changed here |
 |---|---|---|
@@ -55,7 +56,7 @@ In total, against `8f7d870`: **43 files, +5,508 / −1,741 lines**. Per module:
 Three. Anything computed with the original version should be checked against
 this list.
 
-### A1 · Minus-strand VCF extraction (`extract_vcf.py`, `38e603b`)
+### A1 · Minus-strand VCF extraction (`extract_vcf.py`, `ccffdd0`)
 
 The original reversed the window **once per variant** instead of once per
 window, because the reversal sat inside the per-variant loop. With *n* variants
@@ -79,14 +80,14 @@ Regression test: `tests/test_extract_vcf.py`, which checks the output against an
 independently constructed array rather than against a recorded result. No
 reproduction switch: the old behaviour was simply wrong.
 
-### A2 · Read counts above 255 (`extract_bam.py`, `5c699e0`)
+### A2 · Read counts above 255 (`extract_bam.py`, `720cd77`)
 
 The read profile was `uint8`, which wraps silently: 300 reads at one base were
 reported as 44. The smoothed profile was `float16` — three decimal digits,
 saturating at 65504. Now `uint32` and `float32`. Regression test:
 `tests/test_extractors.py::TestBam::test_read_counts_above_255_do_not_wrap`.
 
-### A3 · The second column pass of `create_filter` (`mapper.py`, `5c699e0`)
+### A3 · The second column pass of `create_filter` (`mapper.py`, `720cd77`)
 
 The filter runs columns → rows → columns. The second column pass was meant to
 recount occupancy among the copies that survived the row filter. Instead it
