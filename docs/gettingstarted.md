@@ -49,3 +49,6 @@ pip install git+https://github.com/pkncsk/ma_mapper@experimental
 [Aligning large TE families](/docs/aligning_large_families.md) for families above
 ~50,000 copies, where the default MAFFT settings run out of memory.
 
+
+[Changes from the original `ma_mapper`](/docs/CHANGES_FROM_UPSTREAM.md) lists
+what this fork alters, including three fixes that change results.

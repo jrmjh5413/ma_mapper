@@ -19,6 +19,13 @@
     - [`VCF` file](#vcf-file-1)
     - [`MAF` file](#maf-file-1)
 - [Visualization](#visualization)
+- [Command line](#command-line)
+- [Parallelism](#parallelism)
+- [Logging](#logging)
+- [Semantics worth checking before publishing a number](#semantics-worth-checking-before-publishing-a-number)
+- [Reproducing results from before 0.9.0](#reproducing-results-from-before-090)
+
+See also [Changes from the original `ma_mapper`](CHANGES_FROM_UPSTREAM.md).
 
 ## Input preparation
 TE coordinates, TE MSA, and genome-wide dataset are required for the pipeline. Although there are different methods to prepare these files, the format requirement for each input file, and the preparation method and used including parameters and options in each showcase are outlined below:

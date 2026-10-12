@@ -193,6 +193,8 @@ alignment columns.
 - [Getting started](docs/gettingstarted.md)
 - [Package documentation](docs/package_docs.md) — every function and parameter
 - [Aligning large TE families](docs/aligning_large_families.md)
+- [Changes from the original `ma_mapper`](docs/CHANGES_FROM_UPSTREAM.md) — what
+  this fork changes and what it does not, with the provenance of each layer
 - [CHANGELOG](CHANGELOG.md) — read the 0.9.0 entry if you have results from an
   earlier version; three fixes in it change numbers
 
