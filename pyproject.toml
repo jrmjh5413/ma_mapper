@@ -80,6 +80,22 @@ markers = [
     "requires_mafft: needs the mafft binary on PATH",
 ]
 
+[tool.coverage.run]
+source = ["ma_mapper"]
+# extract_vcf and extract_maf do their work in worker processes, which coverage
+# does not see unless it is told to follow them; without this, the two modules
+# report about a fifth of the lines the tests actually execute.
+concurrency = ["multiprocessing"]
+parallel = true
+sigterm = true
+
+[tool.coverage.report]
+exclude_also = [
+    "if __name__ == .__main__.:",
+    "raise NotImplementedError",
+    "if TYPE_CHECKING:",
+]
+
 [tool.ruff]
 line-length = 110
 target-version = "py310"

@@ -1,0 +1,72 @@
+{% set name = "ma-mapper" %}
+{% set version = "0.9.0" %}
+
+package:
+  name: {{ name|lower }}
+  version: {{ version }}
+
+source:
+  url: https://pypi.io/packages/source/{{ name[0] }}/{{ name }}/ma_mapper-{{ version }}.tar.gz
+  # Filled in at release time: openssl sha256 dist/ma_mapper-<version>.tar.gz
+  sha256: PLACEHOLDER_REPLACE_WITH_SDIST_SHA256
+
+build:
+  noarch: python
+  number: 0
+  script: {{ PYTHON }} -m pip install . -vv --no-deps --no-build-isolation
+  entry_points:
+    - ma-mapper = ma_mapper.cli:main
+
+requirements:
+  host:
+    - python >=3.10
+    - pip
+    - setuptools >=64
+  run:
+    - python >=3.10
+    - numpy >=1.21
+    - pandas >=1.3
+    - biopython >=1.80
+    - h5py >=3.7
+    - compress-pickle >=2.1
+    - matplotlib-base >=3.6
+    - logomaker >=0.8
+    - pysam >=0.21
+    - pybigwig >=0.3.18
+    - pybedtools >=0.9
+    - cyvcf2 >=0.30
+    # Not a Python dependency: pybedtools shells out to this binary, and
+    # bringing it in is the main reason to offer a conda package at all.
+    - bedtools >=2.30
+
+test:
+  imports:
+    - ma_mapper
+    - ma_mapper.mapper
+  commands:
+    - ma-mapper --version
+    - ma-mapper info
+    - ma-mapper overlay --help
+
+about:
+  home: https://github.com/pkncsk/ma_mapper
+  summary: Map genome-wide data onto a multiple alignment of transposable elements
+  description: |
+    ma_mapper turns a multiple sequence alignment of the copies of one
+    transposable element family, plus a genome-wide dataset (BED, BAM, bigWig,
+    VCF or MAF), into a copies x alignment-columns matrix: every measured value
+    sits in the column of the base it was measured on, in each copy's own
+    orientation. Aligning signal to a family consensus squashes every copy onto
+    one idealised coordinate; this keeps each copy as its own row.
+  license: MIT
+  license_family: MIT
+  license_file: LICENSE
+  doc_url: https://github.com/pkncsk/ma_mapper/blob/main/docs/package_docs.md
+  dev_url: https://github.com/jrmjh5413/ma_mapper
+
+extra:
+  recipe-maintainers:
+    - jrmjh5413
+  identifiers:
+    # Add the paper's DOI here once it is out.
+    - doi:PLACEHOLDER

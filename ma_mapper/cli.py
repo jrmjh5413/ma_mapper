@@ -25,6 +25,11 @@ import sys
 from . import __version__, configure_logging, logger
 
 
+def _command_line():
+    """The command as invoked, for the run record."""
+    return "ma-mapper " + " ".join(sys.argv[1:])
+
+
 def _add_filter_arguments(parser):
     group = parser.add_argument_group(
         "alignment filtering",
@@ -120,7 +125,7 @@ def cmd_align(args):
 def cmd_overlay(args):
     import numpy as np
 
-    from . import mapper
+    from . import mapper, provenance
 
     filter_mode = None if args.filter == "none" else args.filter
     matrix, coordinate_table, alignment_matrix = mapper.map_and_overlay(
@@ -142,10 +147,39 @@ def cmd_overlay(args):
     coordinate_table.to_csv(rows_path, sep="\t", index=False)
     alignment_path = stem + ".alignment.npy"
     np.save(alignment_path, alignment_matrix)
+
+    # A fourth file: what this matrix is, so it can be regenerated or audited
+    # without having to remember the command.
+    record_path = provenance.write_run_record(
+        stem + ".run.json",
+        inputs={
+            "alignment": args.alignment,
+            "data": args.data,
+            "coordinates": args.coordinates,
+        },
+        parameters={
+            "data_format": args.format,
+            "filter": args.filter,
+            "col_threshold": args.col_threshold,
+            "col_content_threshold": args.col_content_threshold,
+            "row_threshold": args.row_threshold,
+            "legacy_second_pass": args.legacy_second_pass,
+        },
+        outputs={
+            "matrix": {"path": os.path.abspath(out), "shape": list(matrix.shape),
+                       "dtype": str(matrix.dtype)},
+            "rows": {"path": os.path.abspath(rows_path), "rows": int(len(coordinate_table))},
+            "alignment": {"path": os.path.abspath(alignment_path),
+                          "shape": list(alignment_matrix.shape),
+                          "dtype": str(alignment_matrix.dtype)},
+        },
+        command=_command_line(),
+    )
     logger.info("matrix %s -> %s", matrix.shape, out)
     print(out)
     print(rows_path)
     print(alignment_path)
+    print(record_path)
 
 
 def cmd_plot(args):
@@ -159,12 +193,15 @@ def cmd_plot(args):
 
     matrix = np.load(args.matrix, allow_pickle=True)
     if args.kind == "heatmap":
+        # plot_heatmap hands `data` to imshow, so it takes the 2-D matrix
+        # itself; wrapping it in a list makes it 3-D and imshow refuses it.
         plots.plot_heatmap(
-            data=[matrix],
+            data=matrix,
             save_to_file=args.output,
             image_res=args.dpi,
             plot_title=args.title,
         )
+        plt.close("all")
     else:
         # The profile divides by the number of copies with a base in each
         # column, so it needs the alignment *as it was filtered for this
@@ -227,7 +264,6 @@ def cmd_info(args):
         "matplotlib",
         "logomaker",
         "compress_pickle",
-        "scipy",
     ):
         try:
             module = importlib.import_module(name)
@@ -297,7 +333,9 @@ def build_parser():
         "overlay",
         help="map a dataset onto an alignment",
         description="Write the copies x columns matrix as .npy, plus a .rows.tsv of "
-        "the copies that survived filtering, in matrix row order.",
+        "the copies that survived filtering in matrix row order, a .alignment.npy "
+        "saying which cells are gaps, and a .run.json recording the inputs, the "
+        "parameters and the versions used.",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
     overlay.add_argument("--alignment", required=True, help="aligned FASTA")

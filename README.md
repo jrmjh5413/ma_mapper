@@ -192,7 +192,13 @@ alignment columns.
 
 - [Getting started](docs/gettingstarted.md)
 - [Package documentation](docs/package_docs.md) — every function and parameter
+- [Tutorial](docs/tutorial.md) — a toy family in a minute, then a real one
+- [API reference](docs/api_reference/01overview.md) — every function and every
+  parameter ([what 0.9.0 added](docs/api_reference/10new_in_0.9.0.md))
+- [Notebook tutorials](docs/tutorials/00overview.md) — six notebooks, written
+  against lab paths that need substituting
 - [Aligning large TE families](docs/aligning_large_families.md)
+- [Releasing](docs/RELEASING.md)
 - [Changes from the original `ma_mapper`](docs/CHANGES_FROM_UPSTREAM.md) — what
   this fork changes and what it does not, with the provenance of each layer
 - [CHANGELOG](CHANGELOG.md) — read the 0.9.0 entry if you have results from an

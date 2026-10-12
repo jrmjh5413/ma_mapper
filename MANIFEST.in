@@ -1,0 +1,18 @@
+# What a source distribution carries beyond the package itself. A reviewer who
+# downloads the sdist should get the documentation, the examples and the tests,
+# which is also what the journal asks for ("appropriate test data and detailed
+# documentation").
+include README.md
+include CHANGELOG.md
+include CITATION.cff
+include LICENSE
+include pyproject.toml
+recursive-include docs *.md *.png *.ipynb
+recursive-include examples *.py *.md
+recursive-include tests *.py
+
+# The lab analysis scripts stay in the repository for provenance but are not
+# part of the distributed tool.
+prune script
+prune mi_sourcecode
+global-exclude *.pyc __pycache__ *.log

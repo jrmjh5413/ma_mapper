@@ -168,3 +168,64 @@ class TestParsedAlignmentToFasta:
         # 0 means gap and 5 means N; the old table wrote 0 as 'N' and had no
         # entry for 5 at all.
         assert str(records[0].seq) == "AC-GN"
+
+
+class TestMafCountArguments:
+    """The per-column summaries, on the toy three-species block.
+
+    The reference is 20 bases (chrT:100-120). Mus_musculus carries one extra
+    base, so the reference row has a gap column that has to be dropped;
+    Canis_lupus appears twice and is merged to one row, with its two differing
+    positions collapsed to IUPAC codes.
+    """
+
+    def _run(self, maf, coordinate_table, **kwargs):
+        extract_maf.build_maf_index(maf, chrom=CHROM)
+        copya = coordinate_table[coordinate_table.iloc[:, 3] == "copyA"]
+        return extract_maf.maf_io(copya, maf, **kwargs)[0]
+
+    def test_coverage_counts_species_not_rows(self, three_species_maf, coordinate_table):
+        out = self._run(three_species_maf, coordinate_table, count_arg="coverage")
+        assert len(out) == 20
+        # human, mouse and one merged dog
+        assert max(out) == pytest.approx(3.0)
+
+    def test_common_freq_is_a_fraction(self, three_species_maf, coordinate_table):
+        out = self._run(three_species_maf, coordinate_table, count_arg="common_freq")
+        assert len(out) == 20
+        assert all(0.0 <= value <= 1.0 for value in out)
+
+    def test_ref_freq_is_zero_where_every_species_matches(self, three_species_maf, coordinate_table):
+        out = self._run(three_species_maf, coordinate_table, count_arg="ref_freq")
+        assert len(out) == 20
+        # the two positions where the duplicate dog rows disagree are the only
+        # ones that can be non-reference
+        assert sum(1 for value in out if value and value > 0) <= 4
+
+    def test_base_count_returns_a_dict_per_column(self, three_species_maf, coordinate_table):
+        out = self._run(three_species_maf, coordinate_table, count_arg="base_count")
+        assert len(out) == 20
+        assert isinstance(out[0], dict)
+        assert sum(out[0].values()) == pytest.approx(3.0)
+
+    def test_base_freq_sums_to_one(self, three_species_maf, coordinate_table):
+        out = self._run(three_species_maf, coordinate_table, count_arg="base_freq")
+        assert sum(out[0].values()) == pytest.approx(1.0)
+
+    def test_raw_names_every_species_and_its_base(self, three_species_maf, coordinate_table):
+        out = self._run(three_species_maf, coordinate_table, count_arg="raw")
+        assert len(out) == 20
+        assert "Homo_sapiens" in out[0] and ":" in out[0]
+
+    def test_common_freq_nogap_ignores_gaps_in_the_denominator(
+        self, three_species_maf, coordinate_table
+    ):
+        """It used to divide by a total that still included the gaps."""
+        out = self._run(three_species_maf, coordinate_table, count_arg="common_freq_nogap")
+        assert len(out) == 20
+        assert all((value is None) or np.isnan(value) or 0.0 <= value <= 1.0 for value in out)
+
+    def test_the_overlay_invariant_holds(self, three_species_maf, coordinate_table, tmp_path):
+        """One value per reference base is what map_data requires."""
+        out = self._run(three_species_maf, coordinate_table, count_arg="common_freq")
+        assert len(out) == 20  # chrT:100-120

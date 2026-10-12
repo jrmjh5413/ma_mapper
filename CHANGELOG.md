@@ -186,3 +186,59 @@ Anything built with an earlier version should be checked against this list.
   extras per format, and a console entry point. `setup.py` is gone; the two
   files disagreed about the package name.
 - `CITATION.cff`.
+
+## 0.9.1 (unreleased)
+
+### Fixed
+
+- `plot_basecount` and `plot_logos` called `mapper.base_count(alignment=...)`
+  while the parameter is `alignment_matrix`, so both raised `TypeError` on the
+  first line of work. Neither had ever run, here or upstream.
+- `plot_heatmap` still tested `save_to_file == True`, the one place the 0.9.0
+  sweep missed, so passing it a path drew the figure and saved nothing.
+- `ma-mapper plot --kind heatmap` passed the matrix to `plot_heatmap` wrapped in
+  a list, which reaches `imshow` as a 3-D array and is refused.
+
+### Added
+
+- **A run record beside every matrix.** `ma-mapper overlay` now writes a fourth
+  file, `<output>.run.json`: the inputs with their sizes and checksums, the
+  parameters, the outputs with their shapes, the package versions, the host and
+  any Slurm job id. `ma_mapper.provenance.write_run_record` does the same from
+  Python. Files above 256 MB are identified by size and mtime rather than
+  hashed, because a checksum of a 182 GB gnomAD VCF costs more than the
+  analysis.
+- **Tests: 150, coverage 63 %** (was 111 and 38 %). The new ones cover the
+  command line in process, the plotting save paths, the table helpers in
+  `utility`, and every MAF `count_arg`. Coverage now follows the VCF and MAF
+  worker processes, without which those two modules report about a fifth of the
+  lines the tests actually execute.
+- The test suite caps itself at two worker processes, rather than one per
+  available CPU.
+- **`examples/benchmark_scaling.py`**, which measures wall time and peak memory
+  per stage for a family, one subprocess per family so the memory figure is that
+  family's own.
+- **`docs/tutorial.md`**, which runs as written, and **`docs/RELEASING.md`**,
+  the release procedure and the journal checklist.
+- **`recipe/meta.yaml`**, a Bioconda recipe needing only the version and the
+  sdist checksum at release time. It brings in `bedtools`, which is not a Python
+  dependency but is what `pybedtools` shells out to.
+- **`MANIFEST.in`**, so the source distribution carries the documentation, the
+  examples and the tests — which is what the journal means by test data and
+  documentation being available.
+- A CI job that builds both distributions, checks them with `twine`, installs
+  the wheel into an empty environment and runs the shipped example, so the
+  claim that the package installs and works is checked on every push.
+- `ma_mapper.__init__` no longer advertises `scipy` in `ma-mapper info`:
+  nothing in the package uses it.
+
+### Documentation moved into the distribution
+
+Pakkanan Chansongkrow's six tutorial notebooks and nine-page API reference were
+in `script/documentation/`, marked "under construction" and excluded from the
+build. They are now `docs/tutorials/` and `docs/api_reference/`, they ship, and
+they are linked from the README. Each carries a dated status note: the
+parameters they document are still accurate — in two places the code was fixed
+to match them, `save_to_file` above being one — and the notebooks' absolute
+paths need substituting. `docs/api_reference/10new_in_0.9.0.md` documents every
+parameter added since.

@@ -22,11 +22,24 @@ the expected arrays are ``[100..119]``, ``[219..200]``, ``[300..309, 320..329]``
 and ``[64..50]``.
 """
 
+import os
 import shutil
 
 import numpy as np
 import pandas as pd
 import pytest
+
+
+@pytest.fixture(autouse=True, scope="session")
+def _cap_worker_processes():
+    """Two worker processes for the whole suite, not one per available CPU.
+
+    The VCF and MAF extractors size their pool from the CPUs the process may
+    use. On a login node or a shared runner that is a lot of processes for
+    fixtures holding four copies, and it makes the timings noisy.
+    """
+    os.environ.setdefault("MA_MAPPER_WORKERS", "2")
+    yield
 
 
 def pytest_collection_modifyitems(config, items):

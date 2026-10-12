@@ -107,7 +107,7 @@ def plot_heatmap(data: list|np.ndarray|None = None,
     if ylabel is not None:
         ax.set_ylabel(ylabel)
     
-    if save_to_file == True:
+    if save_to_file:
         plt.rcParams['savefig.dpi'] = image_res
         output_filepath = _resolve_plot_path(save_to_file, 'overlay.png')
         plt.savefig(output_filepath)
@@ -307,7 +307,10 @@ def plot_basecount(alignment:np.ndarray|None,
                    matplot_axes=None,
                    **kwargs):
     col_dict_dna={'-': 'white','A':'green','C': 'blue','T': 'red','G': 'yellow',}
-    base_count=mapper.base_count(alignment=alignment)
+    # base_count's parameter is alignment_matrix, so the keyword form raised
+    # TypeError -- which means neither plot_basecount nor plot_logos has ever
+    # run, in this fork or upstream.
+    base_count=mapper.base_count(alignment)
     ax = matplot_axes if matplot_axes is not None else plt.subplots(figsize=figsize)[1]
     bottom = np.zeros(base_count.shape[1])
     for values, label in zip(base_count, ['-','A','C','T','G']):
@@ -346,7 +349,10 @@ def plot_logos(alignment:np.ndarray|None,
                 yhighlight_alpha: list|None = None,
                 **kwargs):
     import logomaker
-    base_count=mapper.base_count(alignment=alignment)
+    # base_count's parameter is alignment_matrix, so the keyword form raised
+    # TypeError -- which means neither plot_basecount nor plot_logos has ever
+    # run, in this fork or upstream.
+    base_count=mapper.base_count(alignment)
     bese_count_nogap=base_count[1:]
     counts_mat=bese_count_nogap.transpose()
     column_names = ['A', 'C', 'T', 'G']

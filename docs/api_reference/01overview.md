@@ -1,4 +1,14 @@
 # API references
+
+> **Status note (0.9.0, 2026-10-12).** These pages were written for 0.8.x. Every
+> parameter they describe still exists and still means what they say — in two
+> places the code has been *fixed to match this documentation*, notably
+> `save_to_file`, which is described here as accepting a path and until 0.9.0
+> silently ignored one. What is new in 0.9.0 is listed in
+> [new in 0.9.0](10new_in_0.9.0.md); what changed in behaviour is in
+> [../../CHANGELOG.md](../../CHANGELOG.md) and
+> [../CHANGES_FROM_UPSTREAM.md](../CHANGES_FROM_UPSTREAM.md).
+
 ## Overview
 
 ma_mapper is a practical realization of multiple alignment mapping framework in TE analysis. The main function is to extract data from genome-wide dataset and map them on TE multiple alignment and visualize the output. 
