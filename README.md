@@ -54,6 +54,12 @@ pip install -e ".[dev]"
 pytest
 ```
 
+The checks gate the push rather than running on a hosted runner.
+`scripts/run_tests.sh` runs `ruff` and `pytest` and records the commit they
+passed on; `githooks/pre-push` refuses to push a commit with no such record.
+Turn it on once per clone with `git config core.hooksPath githooks`. On a
+cluster, `sbatch scripts/run_tests.slurm` does the same on a compute node.
+
 Python 3.10 or newer. Two external binaries are used when the formats that need
 them are used, and neither is a Python dependency:
 

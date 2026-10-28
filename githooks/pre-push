@@ -1,0 +1,54 @@
+#!/usr/bin/env bash
+# Refuse to push a commit whose checks have not been run and recorded here.
+#
+# This replaces the GitHub Actions workflow the repository used to carry. That
+# workflow ran three Ubuntu jobs and one macOS job on every push to main, and
+# macOS bills at ten times the clock. Of the twenty-two jobs it ever ran,
+# twenty failed, so it reported the repository as broken from 2026-10-11 while
+# spending the account's minutes to do it. The checks are the same; they now
+# run where the work already runs, and nothing is metered.
+#
+# Active once per clone:
+#     git config core.hooksPath githooks
+#
+# To record a commit:
+#     sbatch scripts/run_tests.slurm      # CSD3, on a compute node
+#     bash scripts/run_tests.sh           # anywhere else
+#
+# If it must go out unchecked:  MA_MAPPER_SKIP_TESTS=1 git push
+set -u
+records="$(git rev-parse --git-dir)/test-records"
+
+if [ "${MA_MAPPER_SKIP_TESTS:-}" = "1" ]; then
+    echo "pre-push: MA_MAPPER_SKIP_TESTS=1 - pushing unchecked commits." >&2
+    exit 0
+fi
+
+status=0
+while read -r _local_ref local_sha _remote_ref _remote_sha; do
+    # An all-zero local sha means a branch is being deleted; nothing to test.
+    case "$local_sha" in *[!0]*) ;; *) continue ;; esac
+
+    if [ -f "$records/$local_sha" ]; then
+        echo "pre-push: ${local_sha:0:7} passed $(sed -n 's/^when=//p' "$records/$local_sha")"
+        continue
+    fi
+
+    cat >&2 <<MSG
+
+pre-push: ${local_sha:0:7} has no test record, so it is not being pushed.
+
+  Run them, then push again:
+      sbatch $(git rev-parse --show-toplevel)/scripts/run_tests.slurm
+  or, off the cluster:
+      bash $(git rev-parse --show-toplevel)/scripts/run_tests.sh
+
+  A run records the commit it tested in
+      $records/
+  and only when the working tree is clean, so the record means this commit.
+
+MSG
+    status=1
+done
+
+exit $status
