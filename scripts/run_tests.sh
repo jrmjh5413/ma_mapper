@@ -30,7 +30,17 @@ echo "python   $(command -v python)"
 echo "bedtools $(command -v bedtools || echo 'NOT ON PATH - the tests need it')"
 echo
 
-ruff check ma_mapper tests
+# ruff is a dev extra and is not in every environment. It is run when it is
+# there, skipped loudly when it is not, and either way the record says which
+# checks actually ran, so a record is never read as more than it is.
+if command -v ruff > /dev/null; then
+    ruff check ma_mapper tests
+    checks="ruff,pytest"
+else
+    echo "ruff is not on PATH, so the lint was NOT run (pip install -e '.[dev]' adds it)."
+    checks="pytest only - ruff not installed"
+fi
+
 python -m pytest -q
 
 {
@@ -38,6 +48,7 @@ python -m pytest -q
     echo "when=$(date -Is)"
     echo "host=$(hostname)"
     echo "python=$(python -V 2>&1)"
+    echo "checks=$checks"
 } > "$records/$sha"
 
 echo
