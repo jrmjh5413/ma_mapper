@@ -39,9 +39,9 @@ while read -r _local_ref local_sha _remote_ref _remote_sha; do
 pre-push: ${local_sha:0:7} has no test record, so it is not being pushed.
 
   Run them, then push again:
-      sbatch $(git rev-parse --show-toplevel)/scripts/run_tests.slurm
+      cd $(git rev-parse --show-toplevel) && sbatch scripts/run_tests.slurm
   or, off the cluster:
-      bash $(git rev-parse --show-toplevel)/scripts/run_tests.sh
+      cd $(git rev-parse --show-toplevel) && bash scripts/run_tests.sh
 
   A run records the commit it tested in
       $records/
